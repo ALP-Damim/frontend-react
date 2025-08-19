@@ -1,89 +1,66 @@
 import { useState, useEffect } from "react";
+import { fetchStudentClasses, fetchClassAttendance } from "../../utils/api";
 
-// API 호출 함수 (실제 API 엔드포인트로 교체 필요)
+// 수강 강좌 및 강좌별 출석률을 불러와 UI에 맞게 가공
 const fetchGrades = async () => {
-    try {
-        // 실제 API 호출 시에는 아래 주석을 해제하고 실제 엔드포인트로 교체
-        // const response = await fetch('/api/student/grades');
-        // const data = await response.json();
-        // return data;
-        
-        // 임시 데이터 (API 연동 전까지 사용)
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    courses: [
-                        {
-                            id: "c1",
-                            title: "데이터 분석 실전",
-                            instructor: "김교수",
-                            attendance: 85,
-                            grade: 92,
-                            totalSessions: 12,
-                            attendedSessions: 10,
-                            assignments: [
-                                { name: "1주차 과제", score: 95, maxScore: 100 },
-                                { name: "2주차 과제", score: 88, maxScore: 100 },
-                                { name: "3주차 과제", score: 92, maxScore: 100 }
-                            ],
-                            exams: [
-                                { name: "중간고사", score: 89, maxScore: 100 },
-                                { name: "기말고사", score: 94, maxScore: 100 }
-                            ]
-                        },
-                        {
-                            id: "c2",
-                            title: "웹 개발 입문",
-                            instructor: "이교수",
-                            attendance: 92,
-                            grade: 88,
-                            totalSessions: 10,
-                            attendedSessions: 9,
-                            assignments: [
-                                { name: "HTML/CSS 과제", score: 90, maxScore: 100 },
-                                { name: "JavaScript 과제", score: 85, maxScore: 100 },
-                                { name: "React 프로젝트", score: 88, maxScore: 100 }
-                            ],
-                            exams: [
-                                { name: "기말고사", score: 87, maxScore: 100 }
-                            ]
-                        },
-                        {
-                            id: "c3",
-                            title: "머신러닝 기초",
-                            instructor: "박교수",
-                            attendance: 78,
-                            grade: 85,
-                            totalSessions: 8,
-                            attendedSessions: 6,
-                            assignments: [
-                                { name: "선형회귀 과제", score: 82, maxScore: 100 },
-                                { name: "분류 알고리즘 과제", score: 88, maxScore: 100 }
-                            ],
-                            exams: [
-                                { name: "중간고사", score: 83, maxScore: 100 }
-                            ]
-                        }
-                    ],
-                    overallStats: {
-                        averageAttendance: 85,
-                        averageGrade: 88.3,
-                        totalCourses: 3
-                    }
-                });
-            }, 1000); // 1초 지연으로 로딩 상태 시뮬레이션
-        });
-    } catch (error) {
-        console.error('성적 데이터 조회 실패:', error);
-        throw error;
-    }
+	const studentId = 11; // TODO: 로그인 사용자 ID로 교체
+	const classes = await fetchStudentClasses(studentId);
+	// classes가 배열이 아닐 수 있으니 방어코드
+	const classList = Array.isArray(classes) ? classes : [];
+
+	// 각 강좌별 출석률 동시 조회
+	const attendanceResults = await Promise.allSettled(
+		classList.map((c) => fetchClassAttendance(studentId, c.classId))
+	);
+
+	// 응답에서 출석률(%)과 세부 수치가 있으면 함께 매핑
+	const courses = classList.map((c, idx) => {
+		const r = attendanceResults[idx];
+		let attendanceRate = 0;
+		let attendedSessions;
+		let totalSessions;
+		if (r && r.status === 'fulfilled' && r.value) {
+			const v = r.value;
+			// 다양한 백엔드 키 대응
+			attendanceRate =
+				Number(
+					v.attendanceRate ?? v.rate ?? v.percentage ?? v.attendance ?? 0
+				) || 0;
+			attendedSessions = v.attendedSessions ?? v.attended ?? v.presentCount;
+			totalSessions = v.totalSessions ?? v.total ?? v.sessionCount;
+		}
+		return {
+			id: c.classId,
+			title: c.className,
+			instructor: c.teacherName,
+			attendance: attendanceRate,
+			attendedSessions,
+			totalSessions,
+		};
+	});
+
+	const validRates = courses
+		.map((c) => (typeof c.attendance === 'number' ? c.attendance : 0))
+		.filter((n) => !Number.isNaN(n));
+	const averageAttendance = validRates.length
+		? Math.round(
+			validRates.reduce((sum, v) => sum + v, 0) / validRates.length
+		)
+		: 0;
+
+	return {
+		courses,
+		overallStats: {
+			averageAttendance,
+			totalCourses: classList.length,
+		},
+	};
 };
 
 export function GradeTab() {
     const [grades, setGrades] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedCourse, setSelectedCourse] = useState(null);
 
     useEffect(() => {
         const loadGrades = async () => {
@@ -100,13 +77,6 @@ export function GradeTab() {
 
         loadGrades();
     }, []);
-
-    const getGradeColor = (grade) => {
-        if (grade >= 90) return '#10b981'; // 초록색
-        if (grade >= 80) return '#3b82f6'; // 파란색
-        if (grade >= 70) return '#f59e0b'; // 주황색
-        return '#ef4444'; // 빨간색
-    };
 
     const getAttendanceColor = (attendance) => {
         if (attendance >= 90) return '#10b981';
@@ -145,12 +115,6 @@ export function GradeTab() {
                 <h2 className="section-title">전체 성적 요약</h2>
                 <div className="stats-grid">
                     <div className="stat-card">
-                        <div className="stat-value" style={{ color: getGradeColor(grades.overallStats.averageGrade) }}>
-                            {grades.overallStats.averageGrade}점
-                        </div>
-                        <div className="stat-label">평균 성적</div>
-                    </div>
-                    <div className="stat-card">
                         <div className="stat-value" style={{ color: getAttendanceColor(grades.overallStats.averageAttendance) }}>
                             {grades.overallStats.averageAttendance}%
                         </div>
@@ -165,7 +129,7 @@ export function GradeTab() {
 
             {/* 강의별 성적 */}
             <div className="card">
-                <h2 className="section-title">강의별 성적 상세</h2>
+                <h2 className="section-title">강의별 출석률</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {grades.courses.map((course) => (
                         <div key={course.id} className="course-card">
@@ -174,28 +138,10 @@ export function GradeTab() {
                                     <div className="course-title">{course.title}</div>
                                     <div className="course-info">{course.instructor}</div>
                                 </div>
-                                <button
-                                    className="btn btn-outline"
-                                    onClick={() => setSelectedCourse(selectedCourse === course.id ? null : course.id)}
-                                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                                >
-                                    {selectedCourse === course.id ? '접기' : '상세보기'}
-                                </button>
                             </div>
 
-                            {/* 기본 정보 */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ 
-                                        fontSize: '24px', 
-                                        fontWeight: '700', 
-                                        color: getGradeColor(course.grade),
-                                        marginBottom: '4px'
-                                    }}>
-                                        {course.grade}점
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>최종 성적</div>
-                                </div>
+                            {/* 출석 정보 */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', marginBottom: '4px' }}>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ 
                                         fontSize: '24px', 
@@ -205,72 +151,13 @@ export function GradeTab() {
                                     }}>
                                         {course.attendance}%
                                     </div>
-                                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                                        출석률 ({course.attendedSessions}/{course.totalSessions})
-                                    </div>
+                                    {typeof course.attendedSessions === 'number' && typeof course.totalSessions === 'number' && (
+                                        <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                                            출석률 ({course.attendedSessions}/{course.totalSessions})
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* 상세 정보 */}
-                            {selectedCourse === course.id && (
-                                <div style={{ 
-                                    borderTop: '1px solid var(--border)', 
-                                    paddingTop: '16px',
-                                    marginTop: '16px'
-                                }}>
-                                    {/* 과제 성적 */}
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>과제 성적</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {course.assignments.map((assignment, index) => (
-                                                <div key={index} style={{ 
-                                                    display: 'flex', 
-                                                    justifyContent: 'space-between', 
-                                                    alignItems: 'center',
-                                                    padding: '8px 12px',
-                                                    backgroundColor: 'var(--hover)',
-                                                    borderRadius: '6px'
-                                                }}>
-                                                    <span style={{ fontSize: '13px' }}>{assignment.name}</span>
-                                                    <span style={{ 
-                                                        fontSize: '13px', 
-                                                        fontWeight: '600',
-                                                        color: getGradeColor(assignment.score)
-                                                    }}>
-                                                        {assignment.score}/{assignment.maxScore}점
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* 시험 성적 */}
-                                    <div>
-                                        <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>시험 성적</h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {course.exams.map((exam, index) => (
-                                                <div key={index} style={{ 
-                                                    display: 'flex', 
-                                                    justifyContent: 'space-between', 
-                                                    alignItems: 'center',
-                                                    padding: '8px 12px',
-                                                    backgroundColor: 'var(--hover)',
-                                                    borderRadius: '6px'
-                                                }}>
-                                                    <span style={{ fontSize: '13px' }}>{exam.name}</span>
-                                                    <span style={{ 
-                                                        fontSize: '13px', 
-                                                        fontWeight: '600',
-                                                        color: getGradeColor(exam.score)
-                                                    }}>
-                                                        {exam.score}/{exam.maxScore}점
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>

@@ -77,6 +77,11 @@ export const fetchStudentClasses = async (studentId, options = {}) => {
     return apiCall(endpoint);
 };
 
+// 클래스별 출석률 조회 API (백엔드 스펙: /api/attendance/class/{student_id}/{class_id})
+export const fetchClassAttendance = async (studentId, classId) => {
+    return apiCall(`/attendance/class/${studentId}/${classId}`);
+};
+
 // 전체 강좌 조회 API (limit, semesterOrder, day, offset 지원)
 export const fetchAllClasses = async (options = {}) => {
     const params = new URLSearchParams();
