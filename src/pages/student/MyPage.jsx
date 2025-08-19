@@ -13,7 +13,7 @@ const notifications = [
 
 // 학생용 네비게이션 링크 설정
 const studentNavigationLinks = [
-    { to: "/student", text: "내강의" },
+    { to: "/student/courses", text: "내강의" },
     { to: "/course-application", text: "강의신청" },
     { to: "/mypage", text: "마이페이지" }
 ];

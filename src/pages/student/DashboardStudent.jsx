@@ -36,7 +36,7 @@ const notifications = [
 
 // 학생용 네비게이션 링크 설정
 const studentNavigationLinks = [
-    { to: "/student", text: "내강의" },
+    { to: "/student/courses", text: "내강의" },
     { to: "/course-application", text: "강의신청" },
     { to: "/mypage", text: "마이페이지" }
 ];
@@ -120,7 +120,8 @@ export default function DashboardStudent() {
                                 <div>
                                     {nearestThree.length > 0 ? nearestThree.map((c) => (
                                         <div key={c.classId} className="course-card">
-                                            <div className="course-title">{c.semester}</div>
+                                            <div className="course-title">{c.className}</div>
+                                            {/* <div className="badge">{c.semester}</div> */}
                                             <div className="course-info">
                                                 {c.teacherName} · {c.heldDaysString} · {c.startsAt}~{c.endsAt}
                                             </div>
@@ -182,7 +183,7 @@ export default function DashboardStudent() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {byWeekday[d].map((c) => (
                                                     <div key={`${d}-${c.classId}`} style={{ fontSize: 14, color: 'var(--text)' }}>
-                                                        {c.semester} · {c.startsAt}~{c.endsAt}
+                                                        {c.className} · {c.startsAt}~{c.endsAt}
                                                     </div>
                                                 ))}
                                             </div>
