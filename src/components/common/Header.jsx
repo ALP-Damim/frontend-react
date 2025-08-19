@@ -6,10 +6,12 @@ export default function Header({
     navigationLinks = [], 
     notifications = [], 
     onLogout,
-    logoText = "EduLearn"
+    logoText = "EduLearn",
+    onMarkAllNotificationsRead,
 }) {
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
+    const [localNotifications, setLocalNotifications] = useState(notifications);
     const notificationRef = useRef(null);
 
     const handleLogout = () => {
@@ -23,7 +25,17 @@ export default function Header({
 
     const handleNotificationClick = (e) => {
         e.stopPropagation();
-        setShowNotifications(!showNotifications);
+        const willOpen = !showNotifications;
+        setShowNotifications(willOpen);
+        if (willOpen) {
+            const unreadIds = localNotifications.filter(n => !n.read).map(n => n.id);
+            if (unreadIds.length > 0) {
+                setLocalNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                if (typeof onMarkAllNotificationsRead === 'function') {
+                    onMarkAllNotificationsRead(unreadIds);
+                }
+            }
+        }
     };
 
     const handleClickOutside = (event) => {
@@ -39,7 +51,11 @@ export default function Header({
         };
     }, []);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    useEffect(() => {
+        setLocalNotifications(notifications);
+    }, [notifications]);
+
+    const unreadCount = localNotifications.filter(n => !n.read).length;
 
     return (
         <div className="header-nav">
@@ -86,7 +102,7 @@ export default function Header({
                     
                     {showNotifications && (
                         <NotificationDropdown 
-                            notifications={notifications}
+                            notifications={localNotifications}
                             onClose={() => setShowNotifications(false)}
                         />
                     )}

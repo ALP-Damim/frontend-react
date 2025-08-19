@@ -1,5 +1,5 @@
-// API 기본 설정
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001/api';
+// API 기본 설정 (Vite 환경 변수 사용)
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '/api';
 
 // 공통 API 호출 함수
 const apiCall = async (endpoint, options = {}) => {
@@ -64,6 +64,17 @@ export const fetchExamGrades = async (studentId, courseId) => {
 // 전체 성적 요약 API
 export const fetchGradeSummary = async (studentId) => {
     return apiCall(`/student/${studentId}/grades/summary`);
+};
+
+// 학생 수강 강좌 조회 API (semester, active, nearestOnly 지원)
+export const fetchStudentClasses = async (studentId, options = {}) => {
+    const params = new URLSearchParams();
+    if (options.semester) params.set('semester', options.semester);
+    if (options.active) params.set('active', String(options.active));
+    if (options.nearestOnly) params.set('nearestOnly', 'true');
+    const qs = params.toString();
+    const endpoint = `/students/${studentId}/classes${qs ? `?${qs}` : ''}`;
+    return apiCall(endpoint);
 };
 
 // 에러 처리 유틸리티
