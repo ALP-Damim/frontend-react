@@ -96,8 +96,10 @@ export default function DashboardTeacher() {
                     </tbody>
                 </table>
 
-                <div style={{marginTop:12}}>
+                <div style={{marginTop:12, display:"flex", gap:8}}>
                     <Link className="btn" to="/exam/ex1">예시 시험 미리보기</Link>
+                    {/* ▶ 실시간 모니터로 이동 */}
+                    <Link className="btn btn-outline" to="/teacher/ex1/monitor">ex1 실시간 모니터</Link>
                 </div>
             </div>
         </div>

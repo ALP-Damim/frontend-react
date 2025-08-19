@@ -6,6 +6,8 @@ import Exam from "./pages/Exam.jsx";
 import Result from "./pages/Result.jsx";
 import RAG from "./pages/RAG.jsx";
 import NotificationLog from "./pages/NotificationLog.jsx";
+import StudentStep from "./pages/StudentStep.jsx";
+import TeacherMonitor from "./pages/TeacherMonitor.jsx";
 
 function Nav() {
     const link = ({ isActive }) =>
@@ -44,6 +46,8 @@ export default function App() {
                     <Route path="/teacher" element={<DashboardTeacher />} />
                     <Route path="/admin" element={<DashboardAdmin />} />
                     <Route path="/exam/:examId" element={<Exam />} />
+                    <Route path="/exam/:examId/step" element={<StudentStep />} />
+                    <Route path="/teacher/:examId/monitor" element={<TeacherMonitor />} />
                     <Route path="/result/:examId" element={<Result />} />
                     <Route path="/rag" element={<RAG />} />
                     <Route path="/notifications" element={<NotificationLog />} />

@@ -29,7 +29,7 @@ export default function DashboardStudent() {
                                         난이도: {e.level} · {new Date(e.scheduled).toLocaleString()}
                                     </div>
                                 </div>
-                                <Link className="btn" to={`/exam/${e.id}`}>응시하기</Link>
+                                <Link className="btn" to={`/exam/${e.id}/step?idx=1`}>응시하기</Link>
                             </div>
                         </div>
                     ))}
