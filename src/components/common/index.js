@@ -1,2 +1,4 @@
 export { default as NotificationModal } from './NotificationModal.jsx';
 export { default as RetryButton } from './RetryButton.jsx';
+export { default as Header } from './Header.jsx';
+export { NotificationDropdown } from './NotificationDropdown.jsx';

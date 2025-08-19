@@ -1,137 +1,128 @@
-# EduLearn - 교육 플랫폼
+# EduLearn - 스마트한 교육 플랫폼
 
-React + Vite 기반의 교육 플랫폼으로, 학생, 강사, 관리자 역할별 대시보드와 AI 기능을 제공합니다.
+React 기반의 교육 플랫폼으로, 학생, 강사, 관리자 역할별 대시보드를 제공합니다.
 
-## 🚀 프로젝트 구성
+## 주요 기능
 
-### 기술 스택
-- **Frontend**: React 19.1.1 + Vite 7.1.2
-- **Routing**: React Router DOM 7.8.1
-- **Charts**: Recharts 3.1.2
-- **Linting**: ESLint 9.33.0
+### 학생 기능
+- **대시보드**: 수강 중인 강의, 추천 강의, 일정 관리
+- **마이페이지**: 
+  - 📊 **전체 성적**: 수강 중인 모든 강의의 출석률과 성적 조회
+  - 👤 **개인 정보**: 생년월일, 연락처 등 개인 정보 수정
+- **시험 응시**: 온라인 시험 시스템
+- **결과 확인**: 시험 결과 및 성적 확인
 
-### 디렉토리 구조
-```
-frontend-react/
-├── public/                 # 정적 파일
-├── src/
-│   ├── components/         # 재사용 가능한 컴포넌트
-│   │   ├── student/        # 학생 관련 컴포넌트
-│   │   │   ├── ScoreChart.jsx
-│   │   │   ├── MistakeDetailModal.jsx
-│   │   │   └── index.js
-│   │   ├── teacher/        # 강사 관련 컴포넌트
-│   │   │   └── index.js
-│   │   ├── common/         # 공통 컴포넌트
-│   │   │   ├── NotificationModal.jsx
-│   │   │   ├── RetryButton.jsx
-│   │   │   └── index.js
-│   │   └── index.js
-│   ├── pages/             # 페이지 컴포넌트
-│   │   ├── student/        # 학생 페이지
-│   │   │   ├── DashboardStudent.jsx
-│   │   │   ├── Exam.jsx
-│   │   │   ├── Result.jsx
-│   │   │   ├── StudentStep.jsx
-│   │   │   └── index.js
-│   │   ├── teacher/        # 강사 페이지
-│   │   │   ├── DashboardTeacher.jsx
-│   │   │   ├── TeacherMonitor.jsx
-│   │   │   └── index.js
-│   │   ├── admin/          # 관리자 페이지
-│   │   │   ├── DashboardAdmin.jsx
-│   │   │   └── index.js
-│   │   ├── common/         # 공통 페이지
-│   │   │   ├── RAG.jsx
-│   │   │   ├── NotificationLog.jsx
-│   │   │   └── index.js
-│   │   └── index.js
-│   ├── assets/            # 이미지, 아이콘 등
-│   ├── App.jsx            # 메인 앱 컴포넌트
-│   ├── main.jsx           # 앱 진입점
-│   ├── index.css          # 전역 스타일
-│   ├── App.css            # 앱 스타일
-│   └── styles.css         # 추가 스타일
-├── package.json
-├── vite.config.js
-└── eslint.config.js
-```
+### 강사 기능
+- **대시보드**: 진행 중인 강의 관리, 학생 현황
+- **모니터링**: 실시간 시험 모니터링
 
-### 주요 기능
-- **학생 대시보드**: 시험 목록, 응시, 결과 확인
-- **강사 대시보드**: 시험 생성, 모니터링, 결과 관리
-- **관리자 대시보드**: 시스템 관리 및 통계
-- **AI 검색(RAG)**: 문서 검색 및 근거 문장 하이라이트
-- **실시간 알림**: 시험 전 모달 및 Zoom 연동
-- **AI 피드백**: 답안에 대한 AI 조언 제공
-- **재시도 기능**: 실패 시 최대 3회 재시도
+### 관리자 기능
+- **대시보드**: 전체 시스템 통계 및 현황
+- **사용자 관리**: 학생 및 강사 계정 관리
 
-## 🛠️ 설치 및 실행
+## 마이페이지 상세 기능
 
-### 1. 의존성 설치
+### 📊 전체 성적 탭
+- **전체 통계**: 평균 성적, 평균 출석률, 수강 강의 수
+- **강의별 상세**: 각 강의의 출석률, 최종 성적
+- **과제/시험 성적**: 개별 과제 및 시험 성적 상세 조회
+- **API 연동**: 실제 서버에서 성적 데이터 조회
+
+### 👤 개인 정보 탭
+- **기본 정보**: 이름, 이메일, 전화번호, 생년월일
+- **학적 정보**: 학과, 학년, 주소
+- **비상 연락처**: 비상 시 연락할 사람 정보
+- **실시간 수정**: 정보 수정 및 저장 기능
+
+## 기술 스택
+
+- **Frontend**: React 18, React Router
+- **Styling**: CSS3 (CSS Variables)
+- **API**: RESTful API 연동 준비 완료
+- **State Management**: React Hooks
+
+## 설치 및 실행
+
 ```bash
+# 의존성 설치
 npm install
-```
 
-### 2. 개발 서버 실행
-```bash
+# 개발 서버 실행
 npm run dev
-```
-개발 서버가 `http://localhost:5173`에서 실행됩니다.
 
-### 3. 프로덕션 빌드
-```bash
+# 빌드
 npm run build
 ```
-빌드된 파일은 `dist/` 디렉토리에 생성됩니다.
 
-### 4. 빌드 미리보기
-```bash
-npm run preview
+## API 연동
+
+### 성적 조회 API
+```javascript
+// 전체 성적 조회
+GET /api/student/{studentId}/grades
+
+// 성적 요약 조회
+GET /api/student/{studentId}/grades/summary
+
+// 출석률 조회
+GET /api/student/{studentId}/courses/{courseId}/attendance
 ```
-빌드된 프로덕션 버전을 로컬에서 미리볼 수 있습니다.
 
-### 5. 코드 린팅
-```bash
-npm run lint
+### 프로필 API
+```javascript
+// 프로필 조회
+GET /api/student/{studentId}/profile
+
+// 프로필 업데이트
+PUT /api/student/{studentId}/profile
 ```
 
-## 🎯 데모 시나리오
+## 프로젝트 구조
 
-1. **강사**: 시험 생성 → 난이도/문항 입력
-2. **학생**: 시험 목록 → 응시 → 제출
-3. **결과**: 실시간 점수 확인 → AI 조언 보기
-4. **과제/답안**: AI 피드백 보기 버튼
-5. **RAG 검색**: 문서 Top-k + 근거 문장 하이라이트
-6. **알림**: 시험 전 모달 + Zoom 이동
-7. **실패시**: 재시도(최대 3회)
+```
+src/
+├── components/
+│   ├── common/          # 공통 컴포넌트 (Header, NotificationDropdown)
+│   ├── student/         # 학생 전용 컴포넌트
+│   └── teacher/         # 강사 전용 컴포넌트
+├── pages/
+│   ├── student/         # 학생 페이지 (대시보드, 마이페이지, 시험)
+│   ├── teacher/         # 강사 페이지
+│   ├── admin/           # 관리자 페이지
+│   └── common/          # 공통 페이지
+├── utils/
+│   └── api.js           # API 유틸리티 함수
+└── styles.css           # 전역 스타일
+```
 
-## 📱 사용법
+## 주요 컴포넌트
 
-### 역할별 접근
-- **학생**: `/student` - 시험 응시 및 결과 확인
-- **강사**: `/teacher` - 시험 관리 및 모니터링
-- **관리자**: `/admin` - 시스템 관리
+### 재사용 가능한 컴포넌트
+- **Header**: 네비게이션과 알림 기능이 포함된 공통 헤더
+- **NotificationDropdown**: 알림 목록을 표시하는 드롭다운
 
-### 주요 페이지
-- **시험 응시**: `/exam/:examId`
-- **학생 단계별 진행**: `/exam/:examId/step`
-- **강사 모니터링**: `/teacher/:examId/monitor`
-- **결과 확인**: `/result/:examId`
-- **AI 검색**: `/rag`
-- **알림 로그**: `/notifications`
+### 마이페이지 컴포넌트
+- **MyPage**: 메인 마이페이지 컴포넌트 (탭 관리)
+- **GradeTab**: 전체 성적 조회 및 표시
+- **ProfileTab**: 개인 정보 수정 폼
 
-## 🔧 개발 환경 설정
+## 개발 가이드
 
-### 필수 요구사항
-- Node.js 18.0.0 이상
-- npm 9.0.0 이상
+### 새로운 페이지 추가
+1. `src/pages/` 디렉토리에 새 컴포넌트 생성
+2. `App.jsx`에 라우트 추가
+3. 필요한 경우 `index.js`에 export 추가
 
-### 권장 개발 도구
-- VS Code
-- React Developer Tools
-- ESLint 확장
+### API 연동
+1. `src/utils/api.js`에 API 함수 추가
+2. 컴포넌트에서 API 함수 호출
+3. 로딩 상태 및 에러 처리 구현
 
-## 📝 라이센스
+### 스타일링
+- CSS Variables를 사용한 일관된 디자인 시스템
+- 반응형 디자인 지원
+- 접근성 고려
 
-이 프로젝트는 교육 목적으로 개발되었습니다.
+## 라이센스
+
+MIT License

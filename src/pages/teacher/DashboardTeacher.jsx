@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Header } from "../../components/common";
 
 // 하드코딩된 데이터
 const myCourses = [
@@ -62,163 +62,19 @@ const notifications = [
     { id: 4, message: "알고리즘 문제 풀이 강의 자료가 업데이트되었습니다.", time: "1일 전", read: true },
 ];
 
-function TeacherHeader() {
-    const navigate = useNavigate();
-    const [showNotifications, setShowNotifications] = useState(false);
-    const notificationRef = useRef(null);
-
-    const handleLogout = () => {
-        // 나중에 쿠키 해제 로직 추가 예정
-        navigate('/');
-    };
-
-    const handleNotificationClick = (e) => {
-        e.stopPropagation();
-        setShowNotifications(!showNotifications);
-    };
-
-    const handleClickOutside = (event) => {
-        if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-            setShowNotifications(false);
-        }
-    };
-
-    useEffect(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    return (
-        <div className="header-nav">
-            <div className="header-nav-left">
-                <Link to="/" className="logo">EduLearn</Link>
-                <Link to="/teacher" className="nav-link">내 강의</Link>
-                <Link to="/course-registration" className="nav-link">신규 강의 등록</Link>
-            </div>
-            <div className="header-nav-right">
-                <div ref={notificationRef} style={{ position: 'relative' }}>
-                    <button 
-                        className="btn btn-outline" 
-                        onClick={handleNotificationClick} 
-                        style={{ padding: '8px 12px', position: 'relative' }}
-                    >
-                        🔔
-                        {unreadCount > 0 && (
-                            <span style={{
-                                position: 'absolute',
-                                top: '-5px',
-                                right: '-5px',
-                                background: 'var(--warn)',
-                                color: 'white',
-                                borderRadius: '50%',
-                                width: '18px',
-                                height: '18px',
-                                fontSize: '11px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 'bold'
-                            }}>
-                                {unreadCount}
-                            </span>
-                        )}
-                    </button>
-                    
-                    {showNotifications && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: 0,
-                            width: '350px',
-                            maxHeight: '400px',
-                            backgroundColor: 'var(--panel)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            zIndex: 1000,
-                            overflow: 'hidden'
-                        }}>
-                            <div style={{
-                                padding: '12px 16px',
-                                borderBottom: '1px solid var(--border)',
-                                backgroundColor: 'var(--hover)',
-                                fontWeight: '600'
-                            }}>
-                                알림 ({notifications.length})
-                            </div>
-                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                                {notifications.length > 0 ? (
-                                    notifications.map(notification => (
-                                        <div 
-                                            key={notification.id} 
-                                            style={{
-                                                padding: '12px 16px',
-                                                borderBottom: '1px solid var(--border)',
-                                                backgroundColor: notification.read ? 'transparent' : 'var(--hover)',
-                                                cursor: 'pointer',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--hover)'}
-                                            onMouseLeave={(e) => e.target.style.backgroundColor = notification.read ? 'transparent' : 'var(--hover)'}
-                                        >
-                                            <div style={{ 
-                                                fontSize: '14px', 
-                                                marginBottom: '4px',
-                                                fontWeight: notification.read ? '400' : '600'
-                                            }}>
-                                                {notification.message}
-                                            </div>
-                                            <div style={{ 
-                                                fontSize: '12px', 
-                                                color: 'var(--muted)' 
-                                            }}>
-                                                {notification.time}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: 'var(--muted)'
-                                    }}>
-                                        알림이 없습니다
-                                    </div>
-                                )}
-                            </div>
-                            <div style={{
-                                padding: '8px 16px',
-                                borderTop: '1px solid var(--border)',
-                                backgroundColor: 'var(--hover)'
-                            }}>
-                                <Link 
-                                    to="/notifications" 
-                                    style={{
-                                        fontSize: '13px',
-                                        color: 'var(--accent)',
-                                        textDecoration: 'none'
-                                    }}
-                                >
-                                    모든 알림 보기 →
-                                </Link>
-                            </div>
-                        </div>
-                    )}
-                </div>
-                <button className="btn btn-outline" onClick={handleLogout}>로그아웃</button>
-            </div>
-        </div>
-    );
-}
+// 강사용 네비게이션 링크 설정
+const teacherNavigationLinks = [
+    { to: "/teacher", text: "내 강의" },
+    { to: "/course-registration", text: "신규 강의 등록" }
+];
 
 export default function DashboardTeacher() {
     return (
         <>
-            <TeacherHeader />
+            <Header 
+                navigationLinks={teacherNavigationLinks}
+                notifications={notifications}
+            />
             <div className="container">
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                     {/* 왼쪽 2/3 - 내가 하고 있는 강의 */}

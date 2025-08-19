@@ -1,5 +1,5 @@
 import { Routes, Route, Link, NavLink } from "react-router-dom";
-import { DashboardStudent, Exam, Result, StudentStep } from "./pages/student";
+import { DashboardStudent, Exam, Result, StudentStep, MyPage } from "./pages/student";
 import { DashboardTeacher, TeacherMonitor } from "./pages/teacher";
 import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog } from "./pages/common";
@@ -42,6 +42,7 @@ export default function App() {
                 <Route path="/exam/:examId/step" element={<StudentStep />} />
                 <Route path="/teacher/:examId/monitor" element={<TeacherMonitor />} />
                 <Route path="/result/:examId" element={<Result />} />
+                <Route path="/mypage" element={<MyPage />} />
                 <Route path="/rag" element={<RAG />} />
                 <Route path="/notifications" element={<NotificationLog />} />
             </Routes>
