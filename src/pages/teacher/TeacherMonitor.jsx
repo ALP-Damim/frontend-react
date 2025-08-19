@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import MistakeDetailModal from "../components/MistakeDetailModal.jsx";
+import { MistakeDetailModal } from "../../components/student";
 
 /**
  * URL: /teacher/:examId/monitor

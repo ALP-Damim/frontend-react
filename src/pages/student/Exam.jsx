@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import NotificationModal from "../components/NotificationModal.jsx";
+import { NotificationModal } from "../../components/common";
 
 const exam = {
     id:"ex1",

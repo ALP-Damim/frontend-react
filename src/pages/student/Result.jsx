@@ -1,6 +1,6 @@
 import { useLocation, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
-import RetryButton from "../components/RetryButton.jsx";
+import { RetryButton } from "../../components/common";
 
 function useQuery() {
     const { search } = useLocation();

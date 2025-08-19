@@ -16,20 +16,36 @@ frontend-react/
 ├── public/                 # 정적 파일
 ├── src/
 │   ├── components/         # 재사용 가능한 컴포넌트
-│   │   ├── MistakeDetailModal.jsx
-│   │   ├── NotificationModal.jsx
-│   │   ├── RetryButton.jsx
-│   │   └── ScoreChart.jsx
+│   │   ├── student/        # 학생 관련 컴포넌트
+│   │   │   ├── ScoreChart.jsx
+│   │   │   ├── MistakeDetailModal.jsx
+│   │   │   └── index.js
+│   │   ├── teacher/        # 강사 관련 컴포넌트
+│   │   │   └── index.js
+│   │   ├── common/         # 공통 컴포넌트
+│   │   │   ├── NotificationModal.jsx
+│   │   │   ├── RetryButton.jsx
+│   │   │   └── index.js
+│   │   └── index.js
 │   ├── pages/             # 페이지 컴포넌트
-│   │   ├── DashboardAdmin.jsx
-│   │   ├── DashboardStudent.jsx
-│   │   ├── DashboardTeacher.jsx
-│   │   ├── Exam.jsx
-│   │   ├── NotificationLog.jsx
-│   │   ├── RAG.jsx
-│   │   ├── Result.jsx
-│   │   ├── StudentStep.jsx
-│   │   └── TeacherMonitor.jsx
+│   │   ├── student/        # 학생 페이지
+│   │   │   ├── DashboardStudent.jsx
+│   │   │   ├── Exam.jsx
+│   │   │   ├── Result.jsx
+│   │   │   ├── StudentStep.jsx
+│   │   │   └── index.js
+│   │   ├── teacher/        # 강사 페이지
+│   │   │   ├── DashboardTeacher.jsx
+│   │   │   ├── TeacherMonitor.jsx
+│   │   │   └── index.js
+│   │   ├── admin/          # 관리자 페이지
+│   │   │   ├── DashboardAdmin.jsx
+│   │   │   └── index.js
+│   │   ├── common/         # 공통 페이지
+│   │   │   ├── RAG.jsx
+│   │   │   ├── NotificationLog.jsx
+│   │   │   └── index.js
+│   │   └── index.js
 │   ├── assets/            # 이미지, 아이콘 등
 │   ├── App.jsx            # 메인 앱 컴포넌트
 │   ├── main.jsx           # 앱 진입점
