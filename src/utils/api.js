@@ -77,6 +77,19 @@ export const fetchStudentClasses = async (studentId, options = {}) => {
     return apiCall(endpoint);
 };
 
+// 전체 강좌 조회 API (limit, semesterOrder, day, offset 지원)
+export const fetchAllClasses = async (options = {}) => {
+    const params = new URLSearchParams();
+    if (typeof options.limit === 'number') params.set('limit', String(options.limit));
+    if (options.semesterOrder) params.set('semesterOrder', options.semesterOrder);
+    if (typeof options.day === 'number' && options.day > 0) params.set('day', String(options.day));
+    if (typeof options.offset === 'number' && options.offset > 0) params.set('offset', String(options.offset)); // legacy
+    if (typeof options.startId === 'number' && options.startId > 0) params.set('startId', String(options.startId));
+    const qs = params.toString();
+    const endpoint = `/classes${qs ? `?${qs}` : ''}`;
+    return apiCall(endpoint);
+};
+
 // 에러 처리 유틸리티
 export const handleApiError = (error) => {
     if (error.message.includes('401')) {
