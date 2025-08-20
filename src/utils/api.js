@@ -66,16 +66,80 @@ export const fetchGradeSummary = async (studentId) => {
     return apiCall(`/student/${studentId}/grades/summary`);
 };
 
-// 학생 수강 강좌 조회 API (semester, active, nearestOnly 지원)
-export const fetchStudentClasses = async (studentId, options = {}) => {
+// 수강 신청 API
+export const enrollInClass = async (studentId, classId) => {
+    return apiCall('/enrollments', {
+        method: 'POST',
+        body: JSON.stringify({ studentId, classId }),
+    });
+};
+
+// 수강 신청 목록 조회 API
+export const fetchEnrollments = async (options = {}) => {
     const params = new URLSearchParams();
-    if (options.semester) params.set('semester', options.semester);
-    if (options.active) params.set('active', String(options.active));
-    if (options.nearestOnly) params.set('nearestOnly', 'true');
+    if (options.studentId) params.set('studentId', String(options.studentId));
+    if (options.classId) params.set('classId', String(options.classId));
+    if (options.status) params.set('status', options.status);
     const qs = params.toString();
-    const endpoint = `/students/${studentId}/classes${qs ? `?${qs}` : ''}`;
+    const endpoint = `/enrollments${qs ? `?${qs}` : ''}`;
     return apiCall(endpoint);
 };
+
+// 여러 강좌 한번에 조회 API
+export const fetchClassesBatch = async (classIds) => {
+    return apiCall('/classes/batch', {
+        method: 'POST',
+        body: JSON.stringify(classIds),
+    });
+};
+
+// 학생 수강 강좌 조회 API (enrollment + batch 기반)
+export const fetchStudentClasses = async (studentId, options = {}) => {
+    try {
+        // 먼저 학생의 수강 신청 목록을 조회
+        const enrollments = await fetchEnrollments({ 
+            studentId, 
+            status: 'ENROLLED' 
+        });
+        
+        if (!enrollments || enrollments.length === 0) {
+            return [];
+        }
+        
+        // 수강 신청된 강좌 ID들을 추출
+        const classIds = enrollments.map(enrollment => enrollment.classId);
+        
+        // batch API로 강좌 상세 정보를 한번에 조회
+        const classes = await fetchClassesBatch(classIds);
+        const validClasses = Array.isArray(classes) ? classes : [];
+        
+        // 옵션에 따른 필터링
+        let filteredClasses = validClasses;
+        
+        if (options.semester) {
+            filteredClasses = filteredClasses.filter(c => c.semester === options.semester);
+        }
+        
+        if (options.active !== undefined) {
+            // active 옵션은 현재 학기와 비교하여 처리
+            const currentSemester = '2024-2'; // 현재 학기 (실제로는 동적으로 계산)
+            if (options.active) {
+                filteredClasses = filteredClasses.filter(c => c.semester === currentSemester);
+            } else {
+                filteredClasses = filteredClasses.filter(c => c.semester !== currentSemester);
+            }
+        }
+        
+        return filteredClasses;
+    } catch (error) {
+        console.error('학생 수강 강좌 조회 실패:', error);
+        return [];
+    }
+};
+
+
+
+
 
 // 클래스별 출석률 조회 API (백엔드 스펙: /api/attendance/class/{student_id}/{class_id})
 export const fetchClassAttendance = async (studentId, classId) => {

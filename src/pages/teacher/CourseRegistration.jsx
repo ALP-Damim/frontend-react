@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/common";
-import { createClass, fetchUserProfile } from "../../utils/api";
+import { createClass, fetchUserProfile, fetchAllClasses } from "../../utils/api";
 
 // 하드코딩된 알림 데이터
 const notifications = [
@@ -35,6 +35,10 @@ export default function CourseRegistration() {
     const [teacherProfile, setTeacherProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
     
+    // 강사의 현재 강의 목록
+    const [myClasses, setMyClasses] = useState([]);
+    const [classesLoading, setClassesLoading] = useState(true);
+    
     const [formData, setFormData] = useState({
         className: '',
         semester: '2024-2',
@@ -64,6 +68,22 @@ export default function CourseRegistration() {
         loadProfile();
     }, [teacherId]);
 
+    // 강사의 현재 강의 목록 조회
+    useEffect(() => {
+        const loadMyClasses = async () => {
+            try {
+                setClassesLoading(true);
+                const classes = await fetchAllClasses({ teacherId });
+                setMyClasses(Array.isArray(classes) ? classes : []);
+            } catch (e) {
+                console.error("강의 목록 조회 실패:", e);
+            } finally {
+                setClassesLoading(false);
+            }
+        };
+        loadMyClasses();
+    }, [teacherId]);
+
     // 요일 선택 토글
     const toggleDay = (day) => {
         setSelectedDays(prev => 
@@ -77,6 +97,42 @@ export default function CourseRegistration() {
     const calculateHeldDay = () => {
         return selectedDays.reduce((sum, day) => sum + DAY_MASKS[day], 0);
     };
+
+    // 시간 충돌 검사 함수
+    const hasTimeConflict = (newDays, newStartTime, newEndTime) => {
+        if (!newDays || newDays.length === 0 || !newStartTime || !newEndTime) {
+            return false;
+        }
+
+        return myClasses.some(myClass => {
+            if (!myClass.heldDaysString || !myClass.startsAt || !myClass.endsAt) {
+                return false;
+            }
+
+            const myDays = myClass.heldDaysString.split(',').map(d => d.trim());
+            
+            // 요일이 겹치는지 확인
+            const hasDayOverlap = newDays.some(newDay => myDays.includes(newDay));
+            
+            if (!hasDayOverlap) {
+                return false;
+            }
+
+            // 시간이 겹치는지 확인
+            const myStartTime = myClass.startsAt;
+            const myEndTime = myClass.endsAt;
+
+            // 시간 겹침 조건: (새강의 시작 < 기존강의 끝) && (새강의 끝 > 기존강의 시작)
+            return (newStartTime < myEndTime) && (newEndTime > myStartTime);
+        });
+    };
+
+    // 현재 입력된 정보로 시간 충돌 확인
+    const currentTimeConflict = hasTimeConflict(
+        selectedDays,
+        formData.startsAt + ':00',
+        formData.endsAt + ':00'
+    );
 
     // 폼 데이터 변경 핸들러
     const handleInputChange = (e) => {
@@ -109,6 +165,12 @@ export default function CourseRegistration() {
         
         if (formData.startsAt >= formData.endsAt) {
             setError("종료 시간은 시작 시간보다 늦어야 합니다.");
+            return;
+        }
+
+        // 시간 충돌 검사
+        if (currentTimeConflict) {
+            setError("기존 강의와 시간이 겹칩니다. 다른 시간을 선택해주세요.");
             return;
         }
 
@@ -151,6 +213,34 @@ export default function CourseRegistration() {
                 <div style={{ maxWidth: '600px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                         <h1 style={{ fontSize: '2rem', marginBottom: 6, color: 'var(--accent)' }}>신규 강의 등록</h1>
+                    </div>
+
+                    {/* 현재 강의 목록 */}
+                    <div className="card" style={{ marginBottom: '24px' }}>
+                        <h3 style={{ marginBottom: '16px', color: 'var(--accent)' }}>현재 강의 목록</h3>
+                        {classesLoading ? (
+                            <div style={{ textAlign: 'center', color: 'var(--muted)' }}>강의 목록을 불러오는 중...</div>
+                        ) : myClasses.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: 'var(--muted)' }}>등록된 강의가 없습니다.</div>
+                        ) : (
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                                {myClasses.map(course => (
+                                    <div key={course.classId} style={{ 
+                                        padding: '12px', 
+                                        border: '1px solid var(--border)', 
+                                        borderRadius: '8px',
+                                        backgroundColor: 'var(--hover)'
+                                    }}>
+                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                                            {course.className}
+                                        </div>
+                                        <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                                            {course.heldDaysString} · {course.startsAt}~{course.endsAt}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {error && (
@@ -240,29 +330,65 @@ export default function CourseRegistration() {
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                                     시작 시간 *
                                 </label>
-                                <input
-                                    type="time"
+                                <select
                                     name="startsAt"
                                     value={formData.startsAt}
                                     onChange={handleInputChange}
                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
                                     required
-                                />
+                                >
+                                    <option value="">시작 시간 선택</option>
+                                    {Array.from({ length: 17 }, (_, i) => {
+                                        const hour = Math.floor(i / 2) + 8; // 8시부터 시작
+                                        const minute = (i % 2) * 30; // 0분 또는 30분
+                                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                        return (
+                                            <option key={timeString} value={timeString}>
+                                                {hour}:{minute.toString().padStart(2, '0')}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                                     종료 시간 *
                                 </label>
-                                <input
-                                    type="time"
+                                <select
                                     name="endsAt"
                                     value={formData.endsAt}
                                     onChange={handleInputChange}
                                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
                                     required
-                                />
+                                >
+                                    <option value="">종료 시간 선택</option>
+                                    {Array.from({ length: 17 }, (_, i) => {
+                                        const hour = Math.floor(i / 2) + 8; // 8시부터 시작
+                                        const minute = (i % 2) * 30; // 0분 또는 30분
+                                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                        return (
+                                            <option key={timeString} value={timeString}>
+                                                {hour}:{minute.toString().padStart(2, '0')}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
                             </div>
                         </div>
+
+                        {/* 시간 충돌 경고 */}
+                        {currentTimeConflict && selectedDays.length > 0 && formData.startsAt && formData.endsAt && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <div className="card" style={{ borderColor: 'var(--warn)', backgroundColor: '#fef2f2' }}>
+                                    <div style={{ color: 'var(--warn)', fontWeight: '600', marginBottom: '8px' }}>
+                                        ⚠️ 시간 충돌 감지
+                                    </div>
+                                    <div style={{ color: 'var(--warn)', fontSize: '14px' }}>
+                                        선택한 요일과 시간이 기존 강의와 겹칩니다. 다른 시간을 선택해주세요.
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Zoom URL */}
                         <div style={{ marginBottom: '20px' }}>
@@ -300,7 +426,7 @@ export default function CourseRegistration() {
                             <button
                                 type="submit"
                                 className="btn"
-                                disabled={loading}
+                                disabled={loading || currentTimeConflict}
                                 style={{ flex: 1 }}
                             >
                                 {loading ? '등록 중...' : '강좌 등록'}

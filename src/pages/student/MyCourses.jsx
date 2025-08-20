@@ -31,8 +31,12 @@ export default function MyCourses(){
             try {
                 setLoading(true);
                 setError(null);
-                const data = await fetchStudentClasses(studentId);
-                if (!abort) setClasses(Array.isArray(data) ? data : []);
+                
+                const classData = await fetchStudentClasses(studentId);
+                
+                if (!abort) {
+                    setClasses(Array.isArray(classData) ? classData : []);
+                }
             } catch (e) {
                 if (!abort) setError("수강 강좌를 불러오지 못했습니다.");
             } finally {
@@ -40,7 +44,7 @@ export default function MyCourses(){
             }
         })();
         return () => { abort = true; };
-    }, []);
+    }, [studentId]);
 
     const totalCount = useMemo(() => classes?.length ?? 0, [classes]);
 

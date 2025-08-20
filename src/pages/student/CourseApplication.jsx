@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Header } from "../../components/common";
-import { fetchStudentClasses, fetchAllClasses, formatTimeToMinutes } from "../../utils/api";
+import { fetchStudentClasses, fetchAllClasses, formatTimeToMinutes, enrollInClass } from "../../utils/api";
 
 // 상단바 알림 (공통)
 const notifications = [
@@ -36,6 +36,17 @@ export default function CourseApplication(){
 
     // 필터 상태 (학기 정렬 비활성화)
     const [dayMask, setDayMask] = useState(0); // 0=전체
+    
+    // 재시도 관련 상태
+    const [retryCount, setRetryCount] = useState(0);
+    const [lastRetryTime, setLastRetryTime] = useState(0);
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 3000; // 3초
+    
+    // 신청 상태 관리
+    const [enrollingClassId, setEnrollingClassId] = useState(null);
+    const [enrollmentError, setEnrollmentError] = useState(null);
+    const [enrollmentSuccess, setEnrollmentSuccess] = useState(null);
 
     const observerRef = useRef(null);
 
@@ -50,10 +61,17 @@ export default function CourseApplication(){
                 console.error(e);
             }
         })();
-    }, []);
+    }, [studentId]);
 
     const loadPage = useCallback(async (reset = false, overrides = {}) => {
         if (loading) return;
+        
+        // 재시도 제한 확인
+        const now = Date.now();
+        if (retryCount >= MAX_RETRIES && (now - lastRetryTime) < RETRY_DELAY) {
+            return;
+        }
+        
         try {
             setLoading(true);
             setError(null);
@@ -63,6 +81,7 @@ export default function CourseApplication(){
             // 즉시 목록 비우기 (reset 호출시)
             if (reset) {
                 setItems([]);
+                setRetryCount(0); // reset 시 재시도 카운트 초기화
             }
 
             // 학기 정렬 파라미터는 당분간 사용하지 않음
@@ -74,12 +93,22 @@ export default function CourseApplication(){
                 const maxId = Math.max(...list.map(x => Number(x.classId) || 0));
                 setStartId(maxId + 1);
             }
+            
+            // 성공 시 재시도 카운트 초기화
+            setRetryCount(0);
         } catch (e) {
-            setError('강좌 목록을 불러오지 못했습니다.');
+            setRetryCount(prev => prev + 1);
+            setLastRetryTime(now);
+            
+            if (retryCount >= MAX_RETRIES) {
+                setError(`강좌 목록을 불러오지 못했습니다. (${MAX_RETRIES}회 시도 후 실패)`);
+            } else {
+                setError(`강좌 목록을 불러오지 못했습니다. (${retryCount + 1}/${MAX_RETRIES})`);
+            }
         } finally {
             setLoading(false);
         }
-    }, [LIMIT, startId, dayMask, loading]);
+    }, [LIMIT, startId, dayMask, loading, retryCount, lastRetryTime, MAX_RETRIES, RETRY_DELAY]);
 
     // 필터 변경 시 초기화 후 재조회 (학기 정렬 비활성화)
     useEffect(() => {
@@ -95,13 +124,18 @@ export default function CourseApplication(){
         const io = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && hasMore && !loading) {
+                    // 재시도 제한 확인
+                    const now = Date.now();
+                    if (retryCount >= MAX_RETRIES && (now - lastRetryTime) < RETRY_DELAY) {
+                        return;
+                    }
                     loadPage(false);
                 }
             });
         }, { threshold: 1.0 });
         io.observe(el);
         return () => io.disconnect();
-    }, [hasMore, loading, loadPage]);
+    }, [hasMore, loading, loadPage, retryCount, lastRetryTime, MAX_RETRIES, RETRY_DELAY]);
 
     const toggleDay = (mask) => {
         setStartId(0);
@@ -131,8 +165,77 @@ export default function CourseApplication(){
         setStartId(0);
         setItems([]);
         setHasMore(true);
+        setRetryCount(0); // 필터 초기화 시 재시도 카운트도 초기화
         // dayMask를 0으로 강제하여 즉시 재조회
         loadPage(true, { dayMask: 0 });
+    };
+
+    // 시간 충돌 검사 함수
+    const hasTimeConflict = (newClass) => {
+        if (!newClass || !newClass.heldDaysString || !newClass.startsAt || !newClass.endsAt) {
+            return false;
+        }
+
+        const newDays = newClass.heldDaysString.split(',').map(d => d.trim());
+        const newStartTime = newClass.startsAt;
+        const newEndTime = newClass.endsAt;
+
+        return myClasses.some(myClass => {
+            if (!myClass.heldDaysString || !myClass.startsAt || !myClass.endsAt) {
+                return false;
+            }
+
+            const myDays = myClass.heldDaysString.split(',').map(d => d.trim());
+            
+            // 요일이 겹치는지 확인
+            const hasDayOverlap = newDays.some(newDay => myDays.includes(newDay));
+            
+            if (!hasDayOverlap) {
+                return false;
+            }
+
+            // 시간이 겹치는지 확인
+            const myStartTime = myClass.startsAt;
+            const myEndTime = myClass.endsAt;
+
+            // 시간 겹침 조건: (새강의 시작 < 기존강의 끝) && (새강의 끝 > 기존강의 시작)
+            return (newStartTime < myEndTime) && (newEndTime > myStartTime);
+        });
+    };
+
+    // 강의 신청 핸들러
+    const handleEnroll = async (classId) => {
+        try {
+            setEnrollingClassId(classId);
+            setEnrollmentError(null);
+            setEnrollmentSuccess(null);
+            
+            await enrollInClass(studentId, classId);
+            
+            // 성공 시 로컬 상태에 추가 (API 재호출 없이)
+            const enrolledClass = items.find(c => c.classId === classId);
+            if (enrolledClass) {
+                setMyClasses(prev => [...prev, enrolledClass]);
+            }
+            
+            setEnrollmentSuccess('강의 신청이 완료되었습니다!');
+            
+            // 3초 후 성공 메시지 제거
+            setTimeout(() => {
+                setEnrollmentSuccess(null);
+            }, 3000);
+            
+        } catch (error) {
+            console.error('강의 신청 실패:', error);
+            setEnrollmentError('강의 신청에 실패했습니다. 다시 시도해주세요.');
+            
+            // 5초 후 에러 메시지 제거
+            setTimeout(() => {
+                setEnrollmentError(null);
+            }, 5000);
+        } finally {
+            setEnrollingClassId(null);
+        }
     };
 
     return (
@@ -170,6 +273,24 @@ export default function CourseApplication(){
                 {error && (
                     <div className="card" style={{ marginBottom: 16, borderColor:'var(--warn)' }}>
                         <div style={{ color:'var(--warn)' }}>{error}</div>
+                        {retryCount >= MAX_RETRIES && (
+                            <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--muted)' }}>
+                                잠시 후 다시 시도해주세요.
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 신청 결과 메시지 */}
+                {enrollmentError && (
+                    <div className="card" style={{ marginBottom: 16, borderColor:'var(--warn)', backgroundColor: '#fef2f2' }}>
+                        <div style={{ color:'var(--warn)' }}>{enrollmentError}</div>
+                    </div>
+                )}
+                
+                {enrollmentSuccess && (
+                    <div className="card" style={{ marginBottom: 16, borderColor:'var(--success)', backgroundColor: '#f0fdf4' }}>
+                        <div style={{ color:'var(--success)' }}>{enrollmentSuccess}</div>
                     </div>
                 )}
 
@@ -184,8 +305,18 @@ export default function CourseApplication(){
                             <div style={{ display:'flex', gap:8, marginTop:12, alignItems:'center' }}>
                                 {myClassIdSet.has(c.classId) ? (
                                     <span className="badge">이미 수강중</span>
+                                ) : hasTimeConflict(c) ? (
+                                    <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+                                        시간 충돌
+                                    </span>
                                 ) : (
-                                    <button className="btn">신청</button>
+                                    <button 
+                                        className="btn" 
+                                        onClick={() => handleEnroll(c.classId)}
+                                        disabled={enrollingClassId === c.classId}
+                                    >
+                                        {enrollingClassId === c.classId ? '신청 중...' : '신청'}
+                                    </button>
                                 )}
                             </div>
                         </div>
