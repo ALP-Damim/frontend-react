@@ -6,7 +6,7 @@ import StudentClassDetail from "./pages/student/StudentClassDetail.jsx";
 import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } from "./pages/teacher";
 import ClassManagement from "./pages/teacher/ClassManagement.jsx";
 import { DashboardAdmin } from "./pages/admin";
-import { RAG, NotificationLog } from "./pages/common";
+import { RAG, NotificationLog, NotificationTest } from "./pages/common";
 
 function Nav() {
     const link = ({ isActive }) =>
@@ -29,6 +29,9 @@ function Nav() {
             </NavLink>
             <NavLink to="/notifications" {...{ className: link }}>
                 알림 로그
+            </NavLink>
+            <NavLink to="/notification-test" {...{ className: link }}>
+                알림 테스트
             </NavLink>
         </div>
     );
@@ -55,6 +58,7 @@ export default function App() {
                 <Route path="/mypage" element={<StudentMyPage />} />
                 <Route path="/rag" element={<RAG />} />
                 <Route path="/notifications" element={<NotificationLog />} />
+                <Route path="/notification-test" element={<NotificationTest />} />
             </Routes>
         </>
     );
@@ -87,6 +91,9 @@ function Home() {
                         </Link>
                         <Link className="btn btn-outline" to="/admin" style={{ textAlign: 'center' }}>
                             관리자 대시보드
+                        </Link>
+                        <Link className="btn btn-outline" to="/notification-test" style={{ textAlign: 'center' }}>
+                            알람 테스트
                         </Link>
                     </div>
                 </div>

@@ -293,3 +293,62 @@ a{color:var(--accent);text-decoration:none}
 .grade-poor {
   color: #ef4444;
 }
+
+/* 알림 테스트 페이지 스타일 */
+.badge-success {
+  background: #10b981;
+  color: white;
+}
+
+.badge-error {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.notification-item {
+  transition: all 0.2s ease;
+}
+
+.notification-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.notification-item.unread {
+  border-left: 4px solid var(--accent);
+}
+
+/* 로그 스타일 */
+.log-container {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.log-info {
+  color: #60a5fa;
+}
+
+.log-success {
+  color: #34d399;
+}
+
+.log-warning {
+  color: #fbbf24;
+}
+
+.log-error {
+  color: #f87171;
+}
+
+.log-notification {
+  color: #a78bfa;
+}
