@@ -297,3 +297,69 @@ export const fetchClassSessions = async (classId) => {
 export const fetchAttendance = async (studentId, sessionId) => {
     return apiCall(`/attendance/session/${studentId}/${sessionId}`);
 };
+
+// 알림 관련 API (localhost:8080)
+const NOTIFICATION_API_BASE = 'http://localhost:8080';
+
+// 알림 전송
+export const sendNotification = async (notificationData) => {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationData)
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return response.json();
+};
+
+// 사용자별 알림 목록 조회
+export const fetchUserNotifications = async (userId) => {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}`);
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return response.json();
+};
+
+// 읽지 않은 알림 개수 조회
+export const fetchUnreadNotificationCount = async (userId) => {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}/unread-count`);
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return response.json();
+};
+
+// 개별 알림 읽음 처리
+export const markNotificationAsRead = async (notificationId) => {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/${notificationId}/read`, {
+        method: 'PUT'
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return response.json();
+};
+
+// 모든 알림 읽음 처리
+export const markAllNotificationsAsRead = async (userId) => {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}/read-all`, {
+        method: 'PUT'
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    
+    return response.json();
+};

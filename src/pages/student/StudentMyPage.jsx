@@ -1,13 +1,6 @@
 import { MyPage } from "../common/MyPage";
 import { GradeTab } from "./GradeTab.jsx";
-
-// 하드코딩된 알림 데이터
-const notifications = [
-    { id: 1, message: "데이터 분석 실전 강의가 30분 후에 시작됩니다.", time: "5분 전", read: false },
-    { id: 2, message: "새로운 강의 'React 실전 프로젝트'가 등록되었습니다.", time: "1시간 전", read: false },
-    { id: 3, message: "웹 개발 입문 과제 제출 마감이 임박했습니다.", time: "2시간 전", read: true },
-    { id: 4, message: "머신러닝 기초 강의 자료가 업데이트되었습니다.", time: "1일 전", read: true },
-];
+import { useStudentStomp } from "../../hooks/useStudentStomp";
 
 // 학생용 네비게이션 링크 설정
 const studentNavigationLinks = [
@@ -23,15 +16,23 @@ const studentTabs = [
 ];
 
 export default function StudentMyPage() {
+    // 실제 로그인 연동 시 교체
+    const studentId = 11;
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useStudentStomp(studentId);
+
     return (
         <MyPage
             title="마이페이지"
             subtitle="성적 조회 및 개인 정보 관리"
             navigationLinks={studentNavigationLinks}
-            notifications={notifications}
+            notifications={[]}
             tabs={studentTabs}
             defaultActiveTab="profile"
-            userId={11}
+            userId={studentId}
+            onLogout={handleLogout}
+            showStompStatus={true}
         />
     );
 }

@@ -2,14 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ClassDetail from "../common/ClassDetail";
 import { fetchClassAttendance } from "../../utils/api";
-
-// 학생용 알림 데이터
-const notifications = [
-    { id: 1, message: "데이터 분석 실전 강의가 30분 후에 시작됩니다.", time: "5분 전", read: false },
-    { id: 2, message: "새로운 강의 'React 실전 프로젝트'가 등록되었습니다.", time: "1시간 전", read: false },
-    { id: 3, message: "웹 개발 입문 과제 제출 마감이 임박했습니다.", time: "2시간 전", read: true },
-    { id: 4, message: "머신러닝 기초 강의 자료가 업데이트되었습니다.", time: "1일 전", read: true },
-];
+import { useStudentStomp } from "../../hooks/useStudentStomp";
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -22,6 +15,9 @@ export default function StudentClassDetail() {
     // 실제 로그인 연동 시 교체
     const studentId = 11;
     const { classId } = useParams();
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useStudentStomp(studentId);
     
     // 해당 강좌의 세션별 출석 상태 맵 { [sessionId]: boolean }
     const [attendanceBySession, setAttendanceBySession] = useState({});
@@ -140,8 +136,10 @@ export default function StudentClassDetail() {
         <ClassDetail 
             userType="student"
             navigationLinks={studentNavigationLinks}
-            notifications={notifications}
+            notifications={[]}
             renderSessionActions={renderSessionActions}
+            onLogout={handleLogout}
+            showStompStatus={true}
         />
     );
 }

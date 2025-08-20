@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Header } from "../../components/common";
+import { Header, StompStatusIndicator } from "../../components/common";
 import { ProfileTab } from "./ProfileTab";
 
 export function MyPage({ 
@@ -9,7 +9,9 @@ export function MyPage({
     notifications = [],
     tabs = [],
     defaultActiveTab = null,
-    userId = 11
+    userId = 11,
+    onLogout,
+    showStompStatus = false
 }) {
     const [activeTab, setActiveTab] = useState(defaultActiveTab || (tabs.length > 0 ? tabs[0].id : 'profile'));
 
@@ -18,6 +20,7 @@ export function MyPage({
             <Header 
                 navigationLinks={navigationLinks}
                 notifications={notifications}
+                onLogout={onLogout}
             />
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -28,6 +31,9 @@ export function MyPage({
                         {subtitle}
                     </p>
                 </div>
+
+                {/* STOMP 연결 상태 표시 */}
+                {showStompStatus && <StompStatusIndicator />}
 
                 {/* 탭 네비게이션 */}
                 {tabs.length > 0 && (

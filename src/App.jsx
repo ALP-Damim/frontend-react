@@ -7,6 +7,7 @@ import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } f
 import ClassManagement from "./pages/teacher/ClassManagement.jsx";
 import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog, NotificationTest } from "./pages/common";
+import { StompProvider } from "./contexts/StompContext";
 
 function Nav() {
     const link = ({ isActive }) =>
@@ -39,7 +40,7 @@ function Nav() {
 
 export default function App() {
     return (
-        <>
+        <StompProvider>
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/student" element={<DashboardStudent />} />
@@ -60,7 +61,7 @@ export default function App() {
                 <Route path="/notifications" element={<NotificationLog />} />
                 <Route path="/notification-test" element={<NotificationTest />} />
             </Routes>
-        </>
+        </StompProvider>
     );
 }
 

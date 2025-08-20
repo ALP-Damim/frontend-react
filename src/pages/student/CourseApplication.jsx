@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Header } from "../../components/common";
+import { Header, StompStatusIndicator } from "../../components/common";
 import { fetchStudentClasses, fetchAllClasses, formatTimeToMinutes, enrollInClass } from "../../utils/api";
-
-// 상단바 알림 (공통)
-const notifications = [
-    { id: 1, message: "데이터 분석 실전 강의가 30분 후에 시작됩니다.", time: "5분 전", read: false },
-    { id: 2, message: "새로운 강의 'React 실전 프로젝트'가 등록되었습니다.", time: "1시간 전", read: false },
-    { id: 3, message: "웹 개발 입문 과제 제출 마감이 임박했습니다.", time: "2시간 전", read: true },
-    { id: 4, message: "머신러닝 기초 강의 자료가 업데이트되었습니다.", time: "1일 전", read: true },
-];
+import { useStudentStomp } from "../../hooks/useStudentStomp";
 
 const studentNavigationLinks = [
     { to: "/student/courses", text: "내강의" },
@@ -21,6 +14,9 @@ const DAY = { MON:1, TUE:2, WED:4, THU:8, FRI:16, SAT:32, SUN:64 };
 
 export default function CourseApplication(){
     const studentId = 11; // TODO: auth 연동 시 대체
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useStudentStomp(studentId);
 
     // 나의 수강중 강좌
     const [myClasses, setMyClasses] = useState([]);
@@ -240,7 +236,11 @@ export default function CourseApplication(){
 
     return (
         <>
-            <Header navigationLinks={studentNavigationLinks} notifications={notifications} />
+            <Header 
+                navigationLinks={studentNavigationLinks} 
+                notifications={[]}
+                onLogout={handleLogout}
+            />
             <div className="container">
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
                     <div>
@@ -256,6 +256,9 @@ export default function CourseApplication(){
                         <button className="btn btn-outline" onClick={resetFilters}>필터 초기화</button>
                     </div>
                 </div>
+
+                {/* STOMP 연결 상태 표시 */}
+                <StompStatusIndicator />
 
                 {/* 요일 필터 */}
                 <div className="card" style={{ marginBottom:16 }}>

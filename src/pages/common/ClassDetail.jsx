@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Header } from "../../components/common";
+import { Header, StompStatusIndicator } from "../../components/common";
 import { fetchAllClasses, fetchClassSessions, formatTimeToMinutes } from "../../utils/api";
 
 // 공통 강의 상세 페이지 컴포넌트
@@ -8,7 +8,9 @@ export default function ClassDetail({
     userType = 'student', 
     navigationLinks, 
     notifications,
-    renderSessionActions 
+    renderSessionActions,
+    onLogout,
+    showStompStatus = false
 }) {
     const { classId } = useParams();
     const navigate = useNavigate();
@@ -94,7 +96,11 @@ export default function ClassDetail({
     if (classLoading) {
         return (
             <>
-                <Header navigationLinks={navigationLinks} notifications={notifications} />
+                <Header 
+                    navigationLinks={navigationLinks} 
+                    notifications={notifications}
+                    onLogout={onLogout}
+                />
                 <div className="container">
                     <div style={{ textAlign: 'center', padding: '40px' }}>
                         강의 정보를 불러오는 중...
@@ -107,7 +113,11 @@ export default function ClassDetail({
     if (classError) {
         return (
             <>
-                <Header navigationLinks={navigationLinks} notifications={notifications} />
+                <Header 
+                    navigationLinks={navigationLinks} 
+                    notifications={notifications}
+                    onLogout={onLogout}
+                />
                 <div className="container">
                     <div className="card" style={{ borderColor: 'var(--warn)' }}>
                         <div style={{ color: 'var(--warn)' }}>{classError}</div>
@@ -126,9 +136,16 @@ export default function ClassDetail({
 
     return (
         <>
-            <Header navigationLinks={navigationLinks} notifications={notifications} />
+            <Header 
+                navigationLinks={navigationLinks} 
+                notifications={notifications}
+                onLogout={onLogout}
+            />
             <div className="container">
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                    {/* STOMP 연결 상태 표시 */}
+                    {showStompStatus && <StompStatusIndicator />}
+
                     {/* 강의 정보 */}
                     <div className="card" style={{ marginBottom: '24px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>

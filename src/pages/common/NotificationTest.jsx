@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
+import { 
+    sendNotification, 
+    fetchUserNotifications, 
+    fetchUnreadNotificationCount, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead 
+} from '../../utils/api';
 
 const NotificationTest = () => {
     const [notifications, setNotifications] = useState([]);
@@ -140,29 +147,21 @@ const NotificationTest = () => {
     };
 
     // 알림 전송
-    const sendNotification = async () => {
+    const handleSendNotification = async () => {
         if (!message.trim()) {
             addLog('메시지를 입력해주세요.', 'warning');
             return;
         }
 
         try {
-            const response = await fetch('/api/notifications/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    senderId: currentUserId,
-                    receiverId: targetUserId,
-                    message: message,
-                    type: notificationType
-                })
-            });
+            const notificationData = {
+                senderId: currentUserId,
+                receiverId: targetUserId,
+                message: message,
+                type: notificationType
+            };
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const notification = await response.json();
+            const notification = await sendNotification(notificationData);
             setNotifications(prev => [notification, ...prev]);
             setMessage('');
             
@@ -170,12 +169,7 @@ const NotificationTest = () => {
             if (stompClient.current?.connected) {
                 stompClient.current.publish({
                     destination: '/app/send-notification',
-                    body: JSON.stringify({
-                        senderId: currentUserId,
-                        receiverId: targetUserId,
-                        message: message,
-                        type: notificationType
-                    })
+                    body: JSON.stringify(notificationData)
                 });
             }
             
@@ -186,12 +180,9 @@ const NotificationTest = () => {
     };
 
     // 알림 목록 조회
-    const fetchNotifications = async () => {
+    const handleFetchNotifications = async () => {
         try {
-            const response = await fetch(`/api/notifications/user/${currentUserId}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
+            const data = await fetchUserNotifications(currentUserId);
             setNotifications(data);
             addLog(`알림 ${data.length}개 조회`, 'success');
         } catch (error) {
@@ -200,12 +191,9 @@ const NotificationTest = () => {
     };
 
     // 읽지 않은 알림 개수 조회
-    const fetchUnreadCount = async () => {
+    const handleFetchUnreadCount = async () => {
         try {
-            const response = await fetch(`/api/notifications/user/${currentUserId}/unread-count`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const count = await response.json();
+            const count = await fetchUnreadNotificationCount(currentUserId);
             setUnreadCount(count);
         } catch (error) {
             addLog(`개수 조회 실패: ${error.message}`, 'error');
@@ -213,15 +201,11 @@ const NotificationTest = () => {
     };
 
     // 개별 알림 읽음 처리
-    const markAsRead = async (notificationId) => {
+    const handleMarkAsRead = async (notificationId) => {
         try {
-            const response = await fetch(`/api/notifications/${notificationId}/read`, {
-                method: 'PUT'
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            await fetchNotifications();
-            await fetchUnreadCount();
+            await markNotificationAsRead(notificationId);
+            await handleFetchNotifications();
+            await handleFetchUnreadCount();
             addLog('읽음 처리 완료', 'success');
         } catch (error) {
             addLog(`읽음 처리 실패: ${error.message}`, 'error');
@@ -229,15 +213,11 @@ const NotificationTest = () => {
     };
 
     // 모든 알림 읽음 처리
-    const markAllAsRead = async () => {
+    const handleMarkAllAsRead = async () => {
         try {
-            const response = await fetch(`/api/notifications/user/${currentUserId}/read-all`, {
-                method: 'PUT'
-            });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            await fetchNotifications();
-            await fetchUnreadCount();
+            await markAllNotificationsAsRead(currentUserId);
+            await handleFetchNotifications();
+            await handleFetchUnreadCount();
             addLog('모두 읽음 처리 완료', 'success');
         } catch (error) {
             addLog(`모두 읽음 처리 실패: ${error.message}`, 'error');
@@ -290,8 +270,8 @@ const NotificationTest = () => {
 
     // 초기화
     useEffect(() => {
-        fetchNotifications();
-        fetchUnreadCount();
+        handleFetchNotifications();
+        handleFetchUnreadCount();
         requestNotificationPermission();
         
         return () => disconnectWebSocket();
@@ -387,7 +367,7 @@ const NotificationTest = () => {
                             <option value="ASSIGNMENT">과제</option>
                         </select>
                     </div>
-                    <button className="btn" onClick={sendNotification}>
+                    <button className="btn" onClick={handleSendNotification}>
                         전송
                     </button>
                 </div>
@@ -397,10 +377,10 @@ const NotificationTest = () => {
             <div className="card" style={{ marginBottom: '20px' }}>
                 <h3>알림 관리</h3>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                    <button className="btn" onClick={fetchNotifications}>
+                    <button className="btn" onClick={handleFetchNotifications}>
                         목록 새로고침
                     </button>
-                    <button className="btn btn-outline" onClick={markAllAsRead}>
+                    <button className="btn btn-outline" onClick={handleMarkAllAsRead}>
                         모두 읽음 처리
                     </button>
                     <button className="btn btn-outline" onClick={testBrowserNotification}>
@@ -442,7 +422,7 @@ const NotificationTest = () => {
                                     {!notification.isRead && (
                                         <button 
                                             className="btn btn-sm" 
-                                            onClick={() => markAsRead(notification.id)}
+                                            onClick={() => handleMarkAsRead(notification.id)}
                                         >
                                             읽음
                                         </button>
