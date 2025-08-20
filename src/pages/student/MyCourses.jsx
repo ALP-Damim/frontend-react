@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "../../components/common";
-import { fetchStudentClasses } from "../../utils/api";
+import { fetchStudentClasses, formatTimeToMinutes } from "../../utils/api";
 
 // 하드코딩된 알림 데이터 (대시보드와 동일하게 표시)
 const notifications = [
@@ -70,7 +70,7 @@ export default function MyCourses(){
                             <div key={c.classId} className="card">
                                 <div className="course-title" style={{ marginTop: 6 }}>{c.className ?? '강의명'}</div>
                                 <div className="course-info" style={{ marginTop: 6 }}>
-                                    {(c.teacherName ?? '담당교수 미정')} · {(c.heldDaysString ?? '요일 미정')} · {(c.startsAt ?? '--:--')}~{(c.endsAt ?? '--:--')}
+                                    {(c.teacherName ?? '담당교수 미정')} · {(c.heldDaysString ?? '요일 미정')} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                 </div>
                                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                                     {c.zoomUrl && (

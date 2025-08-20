@@ -1,58 +1,20 @@
 import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "../../components/common";
+import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
 
-// 하드코딩된 데이터
-const myCourses = [
-    { 
-        id: "tc1", 
-        title: "데이터 분석 실전", 
-        students: 45, 
-        progress: 75, 
-        nextSession: "오늘 19:00",
-        status: "진행중"
-    },
-    { 
-        id: "tc2", 
-        title: "웹 개발 입문", 
-        students: 32, 
-        progress: 60, 
-        nextSession: "내일 10:00",
-        status: "진행중"
-    },
-    { 
-        id: "tc3", 
-        title: "머신러닝 기초", 
-        students: 28, 
-        progress: 40, 
-        nextSession: "3일 후 14:00",
-        status: "진행중"
-    },
-    { 
-        id: "tc4", 
-        title: "알고리즘 문제 풀이", 
-        students: 56, 
-        progress: 90, 
-        nextSession: "이번 주 토요일",
-        status: "진행중"
-    },
-];
-
-const upcomingSessions = [
-    { 
-        id: "us1", 
-        title: "데이터 분석 실전 3주차", 
-        time: "오늘 19:00", 
-        students: 45,
-        type: "라이브"
-    },
-    { 
-        id: "us2", 
-        title: "웹 개발 입문 2주차", 
-        time: "내일 10:00", 
-        students: 32,
-        type: "라이브"
-    },
-];
+// 요일 매핑
+const dayNames = ["일", "월", "화", "수", "목", "금", "토"]; // 0~6 (일~토)
+const bitToDays = (heldDay) => {
+    const result = [];
+    const mapping = [6, 0, 1, 2, 3, 4, 5]; // bit index -> real day index (일=6, 월=0 ...)
+    for (let i = 0; i < 7; i++) {
+        if (heldDay & (1 << i)) {
+            result.push(dayNames[mapping[i]]);
+        }
+    }
+    return result;
+};
 
 // 하드코딩된 알림 데이터
 const notifications = [
@@ -69,6 +31,51 @@ const teacherNavigationLinks = [
 ];
 
 export default function DashboardTeacher() {
+    const teacherId = 2; // 강사 ID 고정
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [classes, setClasses] = useState([]);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const data = await fetchAllClasses({ teacherId });
+                setClasses(Array.isArray(data) ? data : []);
+            } catch (e) {
+                setError("강의 목록을 불러오지 못했습니다.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [teacherId]);
+
+    // 제일 빨리 시작하는 강의 1개
+    const nextClass = useMemo(() => {
+        return calculateNextClassTime(classes);
+    }, [classes]);
+
+    // 요일별 그룹화
+    const byWeekday = useMemo(() => {
+        const groups = { "월": [], "화": [], "수": [], "목": [], "금": [], "토": [], "일": [] };
+        classes.forEach((c) => {
+            const days = (c.heldDaysString && c.heldDaysString.split(',').map(s => s.trim()))?.filter(Boolean);
+            const normalized = days?.length ? days : bitToDays(c.heldDay);
+            normalized.forEach((d) => {
+                if (!groups[d]) groups[d] = [];
+                groups[d].push(c);
+            });
+        });
+        // 각 요일 내 정렬 (startsAt 기준)
+        const toVal = (hhmm) => (hhmm ? Number(hhmm.replace(":", "")) : 9999);
+        for (const k of Object.keys(groups)) {
+            groups[k].sort((a, b) => toVal(a.startsAt) - toVal(b.startsAt));
+        }
+        return groups;
+    }, [classes]);
+
     return (
         <>
             <Header 
@@ -76,82 +83,111 @@ export default function DashboardTeacher() {
                 notifications={notifications}
             />
             <div className="container">
+                {error && (
+                    <div className="card" style={{ marginBottom: 16, borderColor: 'var(--warn)' }}>
+                        <div style={{ color: 'var(--warn)' }}>{error}</div>
+                    </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                     {/* 왼쪽 2/3 - 내가 하고 있는 강의 */}
-                    <div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        {/* 제일 빨리 시작하는 강의 1개 */}
                         <div className="card">
-                            <h2 className="section-title">내가 하고 있는 강의</h2>
-                            <div className="grid" style={{ gap: '16px' }}>
-                                {myCourses.map(course => (
-                                    <div key={course.id} className="course-card">
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                                            <div className="course-title">{course.title}</div>
-                                            <span className="badge">{course.status}</span>
-                                        </div>
-                                        <div className="course-info" style={{ marginBottom: '16px' }}>
-                                            수강생 {course.students}명 · 진행률 {course.progress}% · 다음 세션: {course.nextSession}
-                                        </div>
-                                        
-                                        {/* 진행률 바 */}
-                                        <div style={{ 
-                                            width: '100%', 
-                                            height: '8px', 
-                                            backgroundColor: 'var(--border)', 
-                                            borderRadius: '4px',
-                                            marginBottom: '16px'
-                                        }}>
-                                            <div style={{ 
-                                                width: `${course.progress}%`, 
-                                                height: '100%', 
-                                                backgroundColor: 'var(--accent)', 
-                                                borderRadius: '4px',
-                                                transition: 'width 0.3s ease'
-                                            }}></div>
-                                        </div>
-                                        
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <Link className="btn" to={`/teacher/course/${course.id}`}>
-                                                강의실 입장
-                                            </Link>
-                                            <Link className="btn btn-outline" to={`/teacher/course/${course.id}/manage`}>
-                                                관리
-                                            </Link>
-                                        </div>
+                            <h3 className="section-title">곧 시작하는 강의</h3>
+                            {loading ? (
+                                <div style={{ color: 'var(--muted)' }}>불러오는 중...</div>
+                            ) : nextClass ? (
+                                <div className="course-card">
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                        <div className="course-title">{nextClass.className}</div>
+                                        <span className="badge">진행중</span>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="course-info" style={{ marginBottom: '16px' }}>
+                                        {nextClass.teacherName} · {nextClass.heldDaysString} · {formatTimeToMinutes(nextClass.startsAt)}~{formatTimeToMinutes(nextClass.endsAt)}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {nextClass.zoomUrl && (
+                                            <a className="btn" href={nextClass.zoomUrl} target="_blank" rel="noreferrer">
+                                                Zoom 입장
+                                            </a>
+                                        )}
+                                        <Link className="btn btn-outline" to={`/teacher/course/${nextClass.classId}`}>
+                                            강의실 입장
+                                        </Link>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ color: 'var(--muted)' }}>예정된 강의가 없습니다</div>
+                            )}
+                        </div>
+
+                        {/* 모든 강좌 */}
+                        <div className="card">
+                            <h3 className="section-title">내가 하고 있는 강의</h3>
+                            {loading ? (
+                                <div style={{ color: 'var(--muted)' }}>불러오는 중...</div>
+                            ) : (
+                                <div className="grid" style={{ gap: '16px' }}>
+                                    {classes.length > 0 ? classes.map(course => (
+                                        <div key={course.classId} className="course-card">
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                                <div className="course-title">{course.className}</div>
+                                                <span className="badge">진행중</span>
+                                            </div>
+                                            <div className="course-info" style={{ marginBottom: '16px' }}>
+                                                {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <Link className="btn" to={`/teacher/course/${course.classId}`}>
+                                                    강의실 입장
+                                                </Link>
+                                                <Link className="btn btn-outline" to={`/teacher/course/${course.classId}/manage`}>
+                                                    관리
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div style={{ color: 'var(--muted)' }}>진행 중인 강의가 없습니다</div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* 오른쪽 1/3 - 곧 시작하는 강의 */}
-                    <div>
-                        <div className="card">
-                            <h3 className="section-title">곧 시작하는 강의</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                {upcomingSessions.map(session => (
-                                    <div key={session.id} className="course-card">
-                                        <div className="course-title">{session.title}</div>
-                                        <div className="course-info" style={{ marginBottom: '12px' }}>
-                                            {session.time} · {session.students}명 참여 · {session.type}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <Link className="btn" to={`/teacher/session/${session.id}`}>
-                                                입장하기
-                                            </Link>
-                                            <Link className="btn btn-outline" to={`/teacher/session/${session.id}/prepare`}>
-                                                준비
-                                            </Link>
-                                        </div>
+                    {/* 오른쪽 1/3 - 요일별 시간표 */}
+                    <div className="schedule-section">
+                        <h3 className="section-title">요일별 강의</h3>
+                        {loading ? (
+                            <div style={{ color: 'var(--muted)' }}>불러오는 중...</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {["월","화","수","목","금","토","일"].map((d) => (
+                                    <div key={d} style={{ 
+                                        padding: '12px',
+                                        border: '1px solid var(--border)', 
+                                        borderRadius: '8px',
+                                        backgroundColor: (byWeekday[d]?.length ?? 0) > 0 ? 'var(--hover)' : 'transparent'
+                                    }}>
+                                        <div style={{ 
+                                            fontWeight: '700', 
+                                            color: 'var(--accent)',
+                                            marginBottom: 8
+                                        }}>{d}</div>
+                                        {(byWeekday[d] && byWeekday[d].length > 0) ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                {byWeekday[d].map((c) => (
+                                                    <div key={`${d}-${c.classId}`} style={{ fontSize: 14, color: 'var(--text)' }}>
+                                                        {c.className} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: 14, color: 'var(--muted)' }}>강의 없음</div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
-                            
-                            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
-                                <Link className="btn btn-outline" to="/teacher/schedule" style={{ width: '100%', textAlign: 'center' }}>
-                                    전체 일정 보기
-                                </Link>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>

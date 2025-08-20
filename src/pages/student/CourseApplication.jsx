@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Header } from "../../components/common";
-import { fetchStudentClasses, fetchAllClasses } from "../../utils/api";
+import { fetchStudentClasses, fetchAllClasses, formatTimeToMinutes } from "../../utils/api";
 
 // 상단바 알림 (공통)
 const notifications = [
@@ -179,7 +179,7 @@ export default function CourseApplication(){
                         <div key={`${c.classId}`} className="card">
                             <div className="course-title" style={{ marginTop: 6 }}>{c.className}</div>
                             <div className="course-info" style={{ marginTop: 6 }}>
-                                {c.teacherName} · {c.heldDaysString} · {c.startsAt}~{c.endsAt}
+                                {c.teacherName} · {c.heldDaysString} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                             </div>
                             <div style={{ display:'flex', gap:8, marginTop:12, alignItems:'center' }}>
                                 {myClassIdSet.has(c.classId) ? (

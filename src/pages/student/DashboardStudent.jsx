@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ScoreChart } from "../../components/student";
 import { Header } from "../../components/common";
-import { fetchStudentClasses } from "../../utils/api";
+import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
 
 // 하드코딩된 데이터 (추천 강의 예시)
 const recommendedCourses = [
@@ -47,19 +47,14 @@ export default function DashboardStudent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
-    const [nearest, setNearest] = useState([]);
 
     useEffect(() => {
         const load = async () => {
             try {
                 setLoading(true);
                 setError(null);
-                const [allData, nearestData] = await Promise.all([
-                    fetchStudentClasses(studentId),
-                    fetchStudentClasses(studentId, { nearestOnly: true })
-                ]);
-                setClasses(Array.isArray(allData) ? allData : []);
-                setNearest(Array.isArray(nearestData) ? nearestData : []);
+                const data = await fetchStudentClasses(studentId);
+                setClasses(Array.isArray(data) ? data : []);
             } catch (e) {
                 setError("수강 강좌를 불러오지 못했습니다.");
             } finally {
@@ -69,14 +64,10 @@ export default function DashboardStudent() {
         load();
     }, []);
 
-    // 가까운 3개 (API가 nearestOnly 지원하므로 간단히 교체 가능)
+    // 가까운 3개 (계산 함수 사용)
     const nearestThree = useMemo(() => {
-        if (nearest && nearest.length > 0) return nearest.slice(0, 3);
-        const parseTime = (t) => (t ? Date.parse(t) : Infinity);
-        return [...classes]
-            .sort((a, b) => parseTime(a.nextStartAt) - parseTime(b.nextStartAt))
-            .slice(0, 3);
-    }, [nearest, classes]);
+        return calculateNextClassTime(classes, 3);
+    }, [classes]);
 
     // 요일별 그룹화
     const byWeekday = useMemo(() => {
@@ -123,7 +114,7 @@ export default function DashboardStudent() {
                                             <div className="course-title">{c.className}</div>
                                             {/* <div className="badge">{c.semester}</div> */}
                                             <div className="course-info">
-                                                {c.teacherName} · {c.heldDaysString} · {c.startsAt}~{c.endsAt}
+                                                {c.teacherName} · {c.heldDaysString} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                             </div>
                                             <div style={{ marginTop: '12px', display: 'flex', gap: 8 }}>
                                                 {c.zoomUrl && (
@@ -183,7 +174,7 @@ export default function DashboardStudent() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {byWeekday[d].map((c) => (
                                                     <div key={`${d}-${c.classId}`} style={{ fontSize: 14, color: 'var(--text)' }}>
-                                                        {c.className} · {c.startsAt}~{c.endsAt}
+                                                        {c.className} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                                     </div>
                                                 ))}
                                             </div>

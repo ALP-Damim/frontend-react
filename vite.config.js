@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:9090',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
         // 필요 시 경로 재작성
