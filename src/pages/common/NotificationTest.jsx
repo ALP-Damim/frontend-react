@@ -24,117 +24,105 @@ const NotificationTest = () => {
         try {
             addLog('STOMP 연결 시도...', 'info');
             
-            // 먼저 네이티브 WebSocket으로 연결 테스트
-            const testSocket = new WebSocket('ws://localhost:8080/ws');
+            // STOMP 클라이언트 생성
+            const client = new Client({
+                brokerURL: 'ws://localhost:8080/ws',
+                connectHeaders: {},
+                debug: function (str) {
+                    addLog(`STOMP Debug: ${str}`, 'info');
+                },
+                reconnectDelay: 5000,
+                heartbeatIncoming: 4000,
+                heartbeatOutgoing: 4000
+            });
             
-            testSocket.onopen = () => {
-                addLog('네이티브 WebSocket 연결 성공 - STOMP 시도 중...', 'success');
-                testSocket.close();
+            client.onConnect = (frame) => {
+                setIsConnected(true);
+                addLog(`STOMP 연결 성공! Frame: ${JSON.stringify(frame)}`, 'success');
                 
-                // STOMP 클라이언트 생성
-                const client = new Client({
-                    brokerURL: 'ws://localhost:8080/ws',
-                    connectHeaders: {},
-                    debug: function (str) {
-                        addLog(`STOMP Debug: ${str}`, 'info');
-                    },
-                    reconnectDelay: 5000,
-                    heartbeatIncoming: 4000,
-                    heartbeatOutgoing: 4000
+                // 사용자 등록
+                client.publish({
+                    destination: '/app/register',
+                    body: JSON.stringify({ userId: currentUserId })
                 });
                 
-                client.onConnect = (frame) => {
-                    setIsConnected(true);
-                    addLog(`STOMP 연결 성공! Frame: ${JSON.stringify(frame)}`, 'success');
-                    
-                    // 사용자 등록
-                    client.publish({
-                        destination: '/app/register',
-                        body: JSON.stringify({ userId: currentUserId })
-                    });
-                    
-                    // 알림 토픽 구독
-                    client.subscribe(`/topic/notifications/${currentUserId}`, (message) => {
-                        try {
-                            const data = JSON.parse(message.body);
+                // 알림 토픽 구독
+                client.subscribe(`/topic/notifications/${currentUserId}`, (message) => {
+                    try {
+                        const data = JSON.parse(message.body);
+                        
+                        if (data.type === 'NOTIFICATION' || data.message) {
+                            const notification = data.type === 'NOTIFICATION' ? data : {
+                                id: Date.now(),
+                                message: data.message,
+                                senderId: data.senderId || 'system',
+                                type: data.type || 'MESSAGE',
+                                isRead: false,
+                                createdAt: new Date().toISOString()
+                            };
                             
-                            if (data.type === 'NOTIFICATION' || data.message) {
-                                const notification = data.type === 'NOTIFICATION' ? data : {
-                                    id: Date.now(),
-                                    message: data.message,
-                                    senderId: data.senderId || 'system',
-                                    type: data.type || 'MESSAGE',
-                                    isRead: false,
-                                    createdAt: new Date().toISOString()
-                                };
-                                
-                                setNotifications(prev => [notification, ...prev]);
-                                setUnreadCount(prev => prev + 1);
-                                
-                                // 브라우저 알림
-                                if ('Notification' in window && Notification.permission === 'granted') {
-                                    new Notification('새 알림', {
-                                        body: notification.message,
-                                        icon: '/vite.svg'
-                                    });
-                                }
-                                
-                                addLog(`새 알림: ${notification.message}`, 'notification');
+                            setNotifications(prev => [notification, ...prev]);
+                            setUnreadCount(prev => prev + 1);
+                            
+                            // 브라우저 알림
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                new Notification('새 알림', {
+                                    body: notification.message,
+                                    icon: '/vite.svg'
+                                });
                             }
-                        } catch (error) {
-                            addLog(`메시지 파싱 오류: ${error.message}`, 'error');
+                            
+                            addLog(`새 알림: ${notification.message}`, 'notification');
                         }
-                    });
-                    
-                    // 등록 응답 구독
-                    client.subscribe('/topic/registration', (message) => {
-                        try {
-                            const data = JSON.parse(message.body);
-                            addLog(`등록 완료: ${data.message || '성공'}`, 'success');
-                        } catch (error) {
-                            addLog('등록 응답 파싱 오류', 'error');
-                        }
-                    });
-                    
-                    // 인사 메시지 전송 (연결 테스트)
-                    client.publish({
-                        destination: '/app/hello',
-                        body: JSON.stringify({ name: currentUserId })
-                    });
-                    
-                    // 인사 응답 구독
-                    client.subscribe('/topic/greetings', (message) => {
-                        try {
-                            const data = JSON.parse(message.body);
-                            addLog(`서버 응답: ${data.content || '연결 확인됨'}`, 'success');
-                        } catch (error) {
-                            addLog('인사 응답 파싱 오류', 'error');
-                        }
-                    });
-                };
+                    } catch (error) {
+                        addLog(`메시지 파싱 오류: ${error.message}`, 'error');
+                    }
+                });
                 
-                client.onStompError = (frame) => {
-                    addLog(`STOMP 오류: ${JSON.stringify(frame)}`, 'error');
-                    setIsConnected(false);
-                };
+                // 등록 응답 구독
+                client.subscribe('/topic/registration', (message) => {
+                    try {
+                        const data = JSON.parse(message.body);
+                        addLog(`등록 완료: ${data.message || '성공'}`, 'success');
+                    } catch (error) {
+                        addLog('등록 응답 파싱 오류', 'error');
+                    }
+                });
                 
-                client.onWebSocketError = (error) => {
-                    addLog(`WebSocket 오류: ${error}`, 'error');
-                    setIsConnected(false);
-                };
+                // 인사 메시지 전송 (연결 테스트)
+                client.publish({
+                    destination: '/app/hello',
+                    body: JSON.stringify({ name: currentUserId })
+                });
                 
-                client.onWebSocketClose = (event) => {
-                    addLog(`연결 종료: ${JSON.stringify(event)}`, 'info');
-                    setIsConnected(false);
-                };
-                
-                client.activate();
-                stompClient.current = client;
+                // 인사 응답 구독
+                client.subscribe('/topic/greetings', (message) => {
+                    try {
+                        const data = JSON.parse(message.body);
+                        addLog(`서버 응답: ${data.content || '연결 확인됨'}`, 'success');
+                    } catch (error) {
+                        addLog('인사 응답 파싱 오류', 'error');
+                    }
+                });
             };
             
-            testSocket.onerror = (error) => {
-                addLog(`네이티브 WebSocket 연결 실패: ${error}`, 'error');
+            client.onStompError = (frame) => {
+                addLog(`STOMP 오류: ${JSON.stringify(frame)}`, 'error');
+                setIsConnected(false);
             };
+            
+            client.onWebSocketError = (error) => {
+                addLog(`WebSocket 오류: ${error}`, 'error');
+                setIsConnected(false);
+            };
+            
+            client.onWebSocketClose = (event) => {
+                addLog(`연결 종료: ${JSON.stringify(event)}`, 'info');
+                setIsConnected(false);
+            };
+            
+            client.activate();
+            stompClient.current = client;
             
         } catch (error) {
             addLog(`연결 오류: ${error.message}`, 'error');
