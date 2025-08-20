@@ -1,8 +1,8 @@
 import { Routes, Route, Link, NavLink } from "react-router-dom";
-import { DashboardStudent, Exam, Result, StudentStep, MyPage } from "./pages/student";
+import { DashboardStudent, Exam, Result, StudentStep, StudentMyPage } from "./pages/student";
 import MyCourses from "./pages/student/MyCourses.jsx";
 import CourseApplication from "./pages/student/CourseApplication.jsx";
-import { DashboardTeacher, TeacherMonitor } from "./pages/teacher";
+import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } from "./pages/teacher";
 import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog } from "./pages/common";
 
@@ -41,12 +41,14 @@ export default function App() {
                 <Route path="/student/courses" element={<MyCourses />} />
                 <Route path="/course-application" element={<CourseApplication />} />
                 <Route path="/teacher" element={<DashboardTeacher />} />
+                <Route path="/course-registration" element={<CourseRegistration />} />
+        <Route path="/teacher/mypage" element={<TeacherMyPage />} />
                 <Route path="/admin" element={<DashboardAdmin />} />
                 <Route path="/exam/:examId" element={<Exam />} />
                 <Route path="/exam/:examId/step" element={<StudentStep />} />
                 <Route path="/teacher/:examId/monitor" element={<TeacherMonitor />} />
                 <Route path="/result/:examId" element={<Result />} />
-                <Route path="/mypage" element={<MyPage />} />
+                <Route path="/mypage" element={<StudentMyPage />} />
                 <Route path="/rag" element={<RAG />} />
                 <Route path="/notifications" element={<NotificationLog />} />
             </Routes>

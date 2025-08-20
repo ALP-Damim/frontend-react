@@ -27,11 +27,12 @@ const notifications = [
 // 강사용 네비게이션 링크 설정
 const teacherNavigationLinks = [
     { to: "/teacher", text: "내 강의" },
-    { to: "/course-registration", text: "신규 강의 등록" }
+    { to: "/course-registration", text: "신규 강의 등록" },
+    { to: "/teacher/mypage", text: "마이페이지" }
 ];
 
 export default function DashboardTeacher() {
-    const teacherId = 2; // 강사 ID 고정
+    const teacherId = 1; // 강사 ID 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);

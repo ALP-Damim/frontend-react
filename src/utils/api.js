@@ -202,3 +202,24 @@ export const calculateNextClassTime = (classes, limit = 1) => {
     
     return limit === 1 ? (classesWithDistance[0] || null) : classesWithDistance;
 };
+
+// 강좌 등록 API
+export const createClass = async (classData) => {
+    return apiCall('/classes', {
+        method: 'POST',
+        body: JSON.stringify(classData),
+    });
+};
+
+// 사용자 프로필 조회 API
+export const fetchUserProfile = async (userId) => {
+    return apiCall(`/user-profiles/${userId}`);
+};
+
+// 사용자 프로필 수정 API
+export const updateUserProfile = async (userId, profileData) => {
+    return apiCall(`/user-profiles/${userId}`, {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+    });
+};
