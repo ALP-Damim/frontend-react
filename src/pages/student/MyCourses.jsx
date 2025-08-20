@@ -80,7 +80,7 @@ export default function MyCourses(){
                                     {c.zoomUrl && (
                                         <a className="btn" href={c.zoomUrl} target="_blank" rel="noreferrer">Zoom 입장</a>
                                     )}
-                                    <Link className="btn btn-outline" to={`/class/${c.classId}`}>상세</Link>
+                                    <Link className="btn btn-outline" to={`/student/class/${c.classId}`}>상세</Link>
                                 </div>
                             </div>
                         )) : (

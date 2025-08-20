@@ -287,3 +287,13 @@ export const updateUserProfile = async (userId, profileData) => {
         body: JSON.stringify(profileData),
     });
 };
+
+// 강좌별 세션 목록 조회 API
+export const fetchClassSessions = async (classId) => {
+    return apiCall(`/sessions/classes/${classId}`);
+};
+
+// 출석 조회 API
+export const fetchAttendance = async (studentId, sessionId) => {
+    return apiCall(`/attendance/session/${studentId}/${sessionId}`);
+};

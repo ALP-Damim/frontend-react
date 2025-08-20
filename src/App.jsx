@@ -2,7 +2,9 @@ import { Routes, Route, Link, NavLink } from "react-router-dom";
 import { DashboardStudent, Exam, Result, StudentStep, StudentMyPage } from "./pages/student";
 import MyCourses from "./pages/student/MyCourses.jsx";
 import CourseApplication from "./pages/student/CourseApplication.jsx";
+import StudentClassDetail from "./pages/student/StudentClassDetail.jsx";
 import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } from "./pages/teacher";
+import ClassManagement from "./pages/teacher/ClassManagement.jsx";
 import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog } from "./pages/common";
 
@@ -39,10 +41,12 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/student" element={<DashboardStudent />} />
                 <Route path="/student/courses" element={<MyCourses />} />
+                <Route path="/student/class/:classId" element={<StudentClassDetail />} />
                 <Route path="/course-application" element={<CourseApplication />} />
                 <Route path="/teacher" element={<DashboardTeacher />} />
+                <Route path="/teacher/class/:classId" element={<ClassManagement />} />
                 <Route path="/course-registration" element={<CourseRegistration />} />
-        <Route path="/teacher/mypage" element={<TeacherMyPage />} />
+                <Route path="/teacher/mypage" element={<TeacherMyPage />} />
                 <Route path="/admin" element={<DashboardAdmin />} />
                 <Route path="/exam/:examId" element={<Exam />} />
                 <Route path="/exam/:examId/step" element={<StudentStep />} />

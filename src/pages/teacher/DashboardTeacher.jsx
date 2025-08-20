@@ -142,7 +142,7 @@ export default function DashboardTeacher() {
                                                 <Link className="btn" to={`/teacher/course/${course.classId}`}>
                                                     강의실 입장
                                                 </Link>
-                                                <Link className="btn btn-outline" to={`/teacher/course/${course.classId}/manage`}>
+                                                <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
                                                     관리
                                                 </Link>
                                             </div>
