@@ -220,33 +220,7 @@ export default function CourseRegistration() {
                         <h1 style={{ fontSize: '2rem', marginBottom: 6, color: 'var(--accent)' }}>신규 강의 등록</h1>
                     </div>
 
-                    {/* 현재 강의 목록 */}
-                    <div className="card" style={{ marginBottom: '24px' }}>
-                        <h3 style={{ marginBottom: '16px', color: 'var(--accent)' }}>현재 강의 목록</h3>
-                        {classesLoading ? (
-                            <div style={{ textAlign: 'center', color: 'var(--muted)' }}>강의 목록을 불러오는 중...</div>
-                        ) : myClasses.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: 'var(--muted)' }}>등록된 강의가 없습니다.</div>
-                        ) : (
-                            <div style={{ display: 'grid', gap: '12px' }}>
-                                {myClasses.map(course => (
-                                    <div key={course.classId} style={{ 
-                                        padding: '12px', 
-                                        border: '1px solid var(--border)', 
-                                        borderRadius: '8px',
-                                        backgroundColor: 'var(--hover)'
-                                    }}>
-                                        <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                                            {course.className}
-                                        </div>
-                                        <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-                                            {course.heldDaysString} · {course.startsAt}~{course.endsAt}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+
 
                     {error && (
                         <div className="card" style={{ marginBottom: 16, borderColor: 'var(--warn)' }}>
@@ -433,6 +407,7 @@ export default function CourseRegistration() {
                                 className="btn"
                                 disabled={loading || currentTimeConflict}
                                 style={{ flex: 1 }}
+                                title={currentTimeConflict ? "시간 충돌이 발생했습니다. 다른 시간을 선택해주세요." : ""}
                             >
                                 {loading ? '등록 중...' : '강좌 등록'}
                             </button>
@@ -445,6 +420,21 @@ export default function CourseRegistration() {
                                 취소
                             </button>
                         </div>
+                        
+                        {/* 버튼 상태 안내 메시지 */}
+                        {currentTimeConflict && (
+                            <div style={{ 
+                                marginTop: '8px', 
+                                padding: '8px 12px', 
+                                backgroundColor: 'var(--hover)', 
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                color: 'var(--muted)',
+                                textAlign: 'center'
+                            }}>
+                                ⚠️ 시간 충돌로 인해 등록 버튼이 비활성화되었습니다.
+                            </div>
+                        )}
                     </form>
                 </div>
             </div>
