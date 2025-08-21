@@ -1,4 +1,5 @@
 import ClassDetail from "../common/ClassDetail";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 강사용 알림 데이터
 const notifications = [
@@ -16,6 +17,12 @@ const teacherNavigationLinks = [
 ];
 
 export default function ClassManagement() {
+    // 실제 로그인 연동 시 교체
+    const teacherId = 1;
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useUserStomp(teacherId);
+
     // 강사용 액션 버튼들
     const renderTeacherActions = (session) => {
         return (
@@ -36,6 +43,8 @@ export default function ClassManagement() {
             navigationLinks={teacherNavigationLinks}
             notifications={notifications}
             renderSessionActions={renderTeacherActions}
+            onLogout={handleLogout}
+            showStompStatus={false}
         />
     );
 }

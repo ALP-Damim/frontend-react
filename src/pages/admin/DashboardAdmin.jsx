@@ -1,7 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "../../components/common";
 
 export default function DashboardAdmin(){
+    const navigate = useNavigate();
+    
+    // 기본 로그아웃 핸들러
+    const handleLogout = () => {
+        navigate('/');
+    };
+
     const stats = [
         {k:"전체 학생", v: 128, icon: "👥"},
         {k:"전체 강사", v: 24, icon: "👨‍🏫"},
@@ -37,6 +44,7 @@ export default function DashboardAdmin(){
             <Header 
                 navigationLinks={adminNavigationLinks}
                 notifications={notifications}
+                onLogout={handleLogout}
             />
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>

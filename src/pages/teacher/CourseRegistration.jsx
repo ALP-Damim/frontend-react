@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../../components/common";
 import { createClass, fetchUserProfile, fetchAllClasses } from "../../utils/api";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 하드코딩된 알림 데이터
 const notifications = [
@@ -34,6 +35,9 @@ export default function CourseRegistration() {
     const teacherId = 1; // 강사 ID 고정
     const [teacherProfile, setTeacherProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useUserStomp(teacherId);
     
     // 강사의 현재 강의 목록
     const [myClasses, setMyClasses] = useState([]);
@@ -208,6 +212,7 @@ export default function CourseRegistration() {
             <Header 
                 navigationLinks={teacherNavigationLinks}
                 notifications={notifications}
+                onLogout={handleLogout}
             />
             <div className="container">
                 <div style={{ maxWidth: '600px', margin: '0 auto' }}>

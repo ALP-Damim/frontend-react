@@ -1,4 +1,5 @@
 import { MyPage } from "../common/MyPage";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 강사용 네비게이션 링크 설정
 const teacherNavigationLinks = [
@@ -16,6 +17,12 @@ const teacherTabs = [
 ];
 
 export default function TeacherMyPage() {
+    // 실제 로그인 연동 시 교체
+    const teacherId = 1;
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useUserStomp(teacherId);
+
     return (
         <MyPage
             title="강사 마이페이지"
@@ -24,7 +31,9 @@ export default function TeacherMyPage() {
             notifications={[]}
             tabs={teacherTabs}
             defaultActiveTab="profile"
-            userId={1}
+            userId={teacherId}
+            onLogout={handleLogout}
+            showStompStatus={false}
         />
     );
 }

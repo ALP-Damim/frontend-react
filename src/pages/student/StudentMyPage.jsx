@@ -1,6 +1,6 @@
 import { MyPage } from "../common/MyPage";
 import { GradeTab } from "./GradeTab.jsx";
-import { useStudentStomp } from "../../hooks/useStudentStomp";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 학생용 네비게이션 링크 설정
 const studentNavigationLinks = [
@@ -20,7 +20,7 @@ export default function StudentMyPage() {
     const studentId = 11;
     
     // STOMP 연결 관리
-    const { handleLogout } = useStudentStomp(studentId);
+    const { handleLogout } = useUserStomp(studentId);
 
     return (
         <MyPage

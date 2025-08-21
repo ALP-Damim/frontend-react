@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ScoreChart } from "../../components/student";
-import { Header, StompStatusIndicator } from "../../components/common";
+import { Header } from "../../components/common";
 import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
-import { useStudentStomp } from "../../hooks/useStudentStomp";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 하드코딩된 데이터 (추천 강의 예시)
 const recommendedCourses = [
@@ -42,7 +42,7 @@ export default function DashboardStudent() {
     const [classes, setClasses] = useState([]);
     
     // STOMP 연결 관리
-    const { handleLogout } = useStudentStomp(studentId);
+    const { handleLogout } = useUserStomp(studentId);
 
     useEffect(() => {
         const load = async () => {
@@ -98,8 +98,7 @@ export default function DashboardStudent() {
                     </div>
                 )}
                 
-                {/* STOMP 연결 상태 표시 */}
-                <StompStatusIndicator />
+
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                     {/* 왼쪽 2/3 컬럼 */}

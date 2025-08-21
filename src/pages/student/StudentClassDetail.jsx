@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ClassDetail from "../common/ClassDetail";
 import { fetchClassAttendance } from "../../utils/api";
-import { useStudentStomp } from "../../hooks/useStudentStomp";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -17,7 +17,7 @@ export default function StudentClassDetail() {
     const { classId } = useParams();
     
     // STOMP 연결 관리
-    const { handleLogout } = useStudentStomp(studentId);
+    const { handleLogout } = useUserStomp(studentId);
     
     // 해당 강좌의 세션별 출석 상태 맵 { [sessionId]: boolean }
     const [attendanceBySession, setAttendanceBySession] = useState({});

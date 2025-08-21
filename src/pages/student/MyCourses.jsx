@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Header, StompStatusIndicator } from "../../components/common";
+import { Header } from "../../components/common";
 import { fetchStudentClasses, formatTimeToMinutes } from "../../utils/api";
-import { useStudentStomp } from "../../hooks/useStudentStomp";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 학생용 네비게이션 링크 (상단바 동일 구성)
 const studentNavigationLinks = [
@@ -19,7 +19,7 @@ export default function MyCourses(){
     const [classes, setClasses] = useState([]);
     
     // STOMP 연결 관리
-    const { handleLogout } = useStudentStomp(studentId);
+    const { handleLogout } = useUserStomp(studentId);
 
     useEffect(() => {
         let abort = false;
@@ -58,7 +58,7 @@ export default function MyCourses(){
                 </div>
 
                 {/* STOMP 연결 상태 표시 */}
-                <StompStatusIndicator />
+
 
                 {error && (
                     <div className="card" style={{ marginBottom: 16, borderColor: 'var(--warn)' }}>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Header, StompStatusIndicator } from "../../components/common";
+import { Header } from "../../components/common";
 import { fetchStudentClasses, fetchAllClasses, formatTimeToMinutes, enrollInClass } from "../../utils/api";
-import { useStudentStomp } from "../../hooks/useStudentStomp";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 const studentNavigationLinks = [
     { to: "/student/courses", text: "내강의" },
@@ -16,7 +16,7 @@ export default function CourseApplication(){
     const studentId = 11; // TODO: auth 연동 시 대체
     
     // STOMP 연결 관리
-    const { handleLogout } = useStudentStomp(studentId);
+    const { handleLogout } = useUserStomp(studentId);
 
     // 나의 수강중 강좌
     const [myClasses, setMyClasses] = useState([]);
@@ -258,7 +258,7 @@ export default function CourseApplication(){
                 </div>
 
                 {/* STOMP 연결 상태 표시 */}
-                <StompStatusIndicator />
+
 
                 {/* 요일 필터 */}
                 <div className="card" style={{ marginBottom:16 }}>
