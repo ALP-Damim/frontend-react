@@ -226,6 +226,7 @@ export default function CourseRegistration() {
                 navigationLinks={teacherNavigationLinks}
                 notifications={notifications}
                 onLogout={handleLogout}
+                userType="teacher"
             />
             <div className="container">
                 <div style={{ maxWidth: '600px', margin: '0 auto' }}>

@@ -56,6 +56,7 @@ export default function MyCourses(){
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
                 onLogout={handleLogout}
+                userType="student"
             />
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>

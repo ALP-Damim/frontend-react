@@ -11,7 +11,8 @@ export function MyPage({
     defaultActiveTab = null,
     userId = 11,
     onLogout,
-    showStompStatus = false
+    showStompStatus = false,
+    userType = "student"
 }) {
     const [activeTab, setActiveTab] = useState(defaultActiveTab || (tabs.length > 0 ? tabs[0].id : 'profile'));
 
@@ -21,6 +22,7 @@ export function MyPage({
                 navigationLinks={navigationLinks}
                 notifications={notifications}
                 onLogout={onLogout}
+                userType={userType}
             />
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>

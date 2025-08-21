@@ -100,6 +100,7 @@ export default function ClassDetail({
                     navigationLinks={navigationLinks} 
                     notifications={notifications}
                     onLogout={onLogout}
+                    userType={userType}
                 />
                 <div className="container">
                     <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -117,6 +118,7 @@ export default function ClassDetail({
                     navigationLinks={navigationLinks} 
                     notifications={notifications}
                     onLogout={onLogout}
+                    userType={userType}
                 />
                 <div className="container">
                     <div className="card" style={{ borderColor: 'var(--warn)' }}>
@@ -140,6 +142,7 @@ export default function ClassDetail({
                 navigationLinks={navigationLinks} 
                 notifications={notifications}
                 onLogout={onLogout}
+                userType={userType}
             />
             <div className="container">
                 <div style={{ maxWidth: '800px', margin: '0 auto' }}>

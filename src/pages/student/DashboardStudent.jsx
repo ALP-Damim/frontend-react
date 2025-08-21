@@ -115,10 +115,15 @@ export default function DashboardStudent() {
                 groups[d].push(c);
             });
         });
-        // 각 요일 내 정렬 (startsAt 기준)
-        const toVal = (hhmm) => (hhmm ? Number(hhmm.replace(":", "")) : 9999);
+        // 각 요일 내 정렬 (startsAt 기준) - 시간을 분 단위로 변환하여 정확한 정렬
+        const timeToMinutes = (timeStr) => {
+            if (!timeStr) return 9999;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
+        
         for (const k of Object.keys(groups)) {
-            groups[k].sort((a, b) => toVal(a.startsAt) - toVal(b.startsAt));
+            groups[k].sort((a, b) => timeToMinutes(a.startsAt) - timeToMinutes(b.startsAt));
         }
         return groups;
     }, [classes]);
@@ -186,6 +191,7 @@ export default function DashboardStudent() {
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
                 onLogout={handleLogoutWithAlarm}
+                userType="student"
             />
             <div className="container">
                 {error && (

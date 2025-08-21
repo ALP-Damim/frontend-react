@@ -45,6 +45,7 @@ export default function DashboardAdmin(){
                 navigationLinks={adminNavigationLinks}
                 notifications={notifications}
                 onLogout={handleLogout}
+                userType="admin"
             />
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>

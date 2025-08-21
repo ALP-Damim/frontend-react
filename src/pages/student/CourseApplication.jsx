@@ -240,6 +240,7 @@ export default function CourseApplication(){
                 navigationLinks={studentNavigationLinks} 
                 notifications={[]}
                 onLogout={handleLogout}
+                userType="student"
             />
             <div className="container">
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>

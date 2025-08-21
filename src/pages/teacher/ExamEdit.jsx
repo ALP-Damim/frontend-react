@@ -186,6 +186,7 @@ export default function ExamEdit() {
                 <Header 
                     navigationLinks={teacherNavigationLinks}
                     notifications={[]}
+                    userType="teacher"
                 />
                 <div className="container">
                     <div className="card">
@@ -204,6 +205,7 @@ export default function ExamEdit() {
                 <Header 
                     navigationLinks={teacherNavigationLinks}
                     notifications={[]}
+                    userType="teacher"
                 />
                 <div className="container">
                     <div className="card" style={{ borderColor: 'var(--warn)' }}>
@@ -221,6 +223,7 @@ export default function ExamEdit() {
             <Header 
                 navigationLinks={teacherNavigationLinks}
                 notifications={[]}
+                userType="teacher"
             />
             <div className="container">
                 <div className="card" style={{ maxWidth: '1000px', margin: '20px auto' }}>

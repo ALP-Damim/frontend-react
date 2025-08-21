@@ -83,10 +83,15 @@ export default function DashboardTeacher() {
                 groups[d].push(c);
             });
         });
-        // 각 요일 내 정렬 (startsAt 기준)
-        const toVal = (hhmm) => (hhmm ? Number(hhmm.replace(":", "")) : 9999);
+        // 각 요일 내 정렬 (startsAt 기준) - 시간을 분 단위로 변환하여 정확한 정렬
+        const timeToMinutes = (timeStr) => {
+            if (!timeStr) return 9999;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
+        
         for (const k of Object.keys(groups)) {
-            groups[k].sort((a, b) => toVal(a.startsAt) - toVal(b.startsAt));
+            groups[k].sort((a, b) => timeToMinutes(a.startsAt) - timeToMinutes(b.startsAt));
         }
         return groups;
     }, [classes]);
@@ -175,6 +180,7 @@ export default function DashboardTeacher() {
                 navigationLinks={teacherNavigationLinks}
                 notifications={notifications}
                 onLogout={handleLogoutWithAlarm}
+                userType="teacher"
             />
             <div className="container">
                 {error && (
@@ -200,13 +206,6 @@ export default function DashboardTeacher() {
                                 <div className="course-card">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                         <div className="course-title">{nextClass.className}</div>
-                                        {nextClass.isCurrent ? (
-                                            <span className="badge" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
-                                                진행중
-                                            </span>
-                                        ) : (
-                                            <span className="badge">예정</span>
-                                        )}
                                     </div>
                                     <div className="course-info" style={{ marginBottom: '16px' }}>
                                         {nextClass.teacherName} · {nextClass.heldDaysString} · {formatTimeToMinutes(nextClass.startsAt)}~{formatTimeToMinutes(nextClass.endsAt)}
@@ -244,7 +243,6 @@ export default function DashboardTeacher() {
                                         <div key={course.classId} className="course-card">
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                                 <div className="course-title">{course.className}</div>
-                                                <span className="badge">진행중</span>
                                             </div>
                                             <div className="course-info" style={{ marginBottom: '16px' }}>
                                                 {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}

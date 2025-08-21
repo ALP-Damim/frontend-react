@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
+import { submitAnswer } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -43,21 +44,28 @@ export default function ExamQuestion() {
         }));
     };
 
-    // 이전 문제로 이동
-    const handlePreviousQuestion = () => {
-        if (!isFirstQuestion) {
-            const prevIndex = currentQuestionIndex - 1;
-            setCurrentQuestionIndex(prevIndex);
-            navigate(`/student/exam/${examId}/question/${prevIndex + 1}`);
-        }
-    };
 
-    // 다음 문제로 이동
-    const handleNextQuestion = () => {
+
+    // 다음 문제로 이동 (현재 답안 제출 후)
+    const handleNextQuestion = async () => {
         if (!isLastQuestion) {
-            const nextIndex = currentQuestionIndex + 1;
-            setCurrentQuestionIndex(nextIndex);
-            navigate(`/student/exam/${examId}/question/${nextIndex + 1}`);
+            try {
+                // 현재 답안 제출
+                if (answers[currentQuestionIndex]) {
+                    await submitAnswer(submission.id, currentQuestion.id, { 
+                        answer: answers[currentQuestionIndex]
+                    });
+                    console.log(`문제 ${currentQuestionIndex + 1} 답안 제출 완료`);
+                }
+                
+                // 다음 문제로 이동
+                const nextIndex = currentQuestionIndex + 1;
+                setCurrentQuestionIndex(nextIndex);
+                navigate(`/student/exam/${examId}/question/${nextIndex + 1}`);
+            } catch (error) {
+                console.error('답안 제출 실패:', error);
+                setError('답안 제출에 실패했습니다. 다시 시도해주세요.');
+            }
         }
     };
 
@@ -69,14 +77,30 @@ export default function ExamQuestion() {
 
         setLoading(true);
         try {
-            // TODO: 답안 제출 API 호출
-            console.log('시험 제출:', {
-                examId,
-                submission,
-                answers
+            // 1. 마지막 문제 답안 제출
+            if (answers[currentQuestionIndex]) {
+                await submitAnswer(submission.id, currentQuestion.id, { 
+                    answer: answers[currentQuestionIndex]
+                });
+                console.log(`마지막 문제 답안 제출 완료`);
+            }
+
+            // 2. 모든 답안을 서버에 제출
+            const submitPromises = Object.entries(answers).map(async ([index, answer]) => {
+                if (answer) {
+                    const questionIndex = parseInt(index);
+                    const question = questions[questionIndex];
+                    return submitAnswer(submission.id, question.id, { 
+                        answer: answer
+                    });
+                }
+                return Promise.resolve();
             });
 
-            // 결과 페이지로 이동
+            await Promise.all(submitPromises);
+            console.log('모든 답안 제출 완료');
+
+            // 3. 결과 페이지로 이동
             navigate(`/student/exam/${examId}/result`, {
                 state: {
                     exam,
@@ -99,6 +123,7 @@ export default function ExamQuestion() {
                 <Header 
                     navigationLinks={studentNavigationLinks}
                     notifications={[]}
+                    userType="student"
                 />
                 <div className="container">
                     <div className="card">
@@ -116,6 +141,7 @@ export default function ExamQuestion() {
             <Header 
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
+                userType="student"
             />
             <div className="container">
                 <div className="card" style={{ maxWidth: '800px', margin: '20px auto' }}>
@@ -147,35 +173,35 @@ export default function ExamQuestion() {
                             {currentQuestion.body}
                         </h3>
 
-                        {/* 문제 유형에 따른 답안 입력 */}
-                        {currentQuestion.qtype === 'MULTIPLE_CHOICE' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {JSON.parse(currentQuestion.choices || '[]').map((choice, index) => (
-                                    <label key={index} style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '12px',
-                                        padding: '12px',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        backgroundColor: answers[currentQuestionIndex] === choice ? 'var(--hover)' : 'transparent'
-                                    }}>
-                                        <input
-                                            type="radio"
-                                            name={`question-${currentQuestionIndex}`}
-                                            value={choice}
-                                            checked={answers[currentQuestionIndex] === choice}
-                                            onChange={(e) => handleAnswerChange(e.target.value)}
-                                            style={{ margin: 0 }}
-                                        />
-                                        <span>{choice}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        )}
+                                                 {/* 문제 유형에 따른 답안 입력 */}
+                         {currentQuestion.qtype === 'MCQ' && (
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                 {JSON.parse(currentQuestion.choices || '[]').map((choice, index) => (
+                                     <label key={index} style={{ 
+                                         display: 'flex', 
+                                         alignItems: 'center', 
+                                         gap: '12px',
+                                         padding: '12px',
+                                         border: '1px solid var(--border)',
+                                         borderRadius: '8px',
+                                         cursor: 'pointer',
+                                         backgroundColor: answers[currentQuestionIndex] === choice ? 'var(--hover)' : 'transparent'
+                                     }}>
+                                         <input
+                                             type="radio"
+                                             name={`question-${currentQuestionIndex}`}
+                                             value={choice}
+                                             checked={answers[currentQuestionIndex] === choice}
+                                             onChange={(e) => handleAnswerChange(e.target.value)}
+                                             style={{ margin: 0 }}
+                                         />
+                                         <span>{index + 1}. {choice}</span>
+                                     </label>
+                                 ))}
+                             </div>
+                         )}
 
-                        {currentQuestion.qtype === 'SHORT_ANSWER' && (
+                        {currentQuestion.qtype === 'SHORT' && (
                             <textarea
                                 value={answers[currentQuestionIndex] || ''}
                                 onChange={(e) => handleAnswerChange(e.target.value)}
@@ -225,78 +251,74 @@ export default function ExamQuestion() {
                         )}
                     </div>
 
-                    {/* 네비게이션 버튼 */}
-                    <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        gap: '12px'
-                    }}>
-                        <button
-                            className="btn btn-outline"
-                            onClick={handlePreviousQuestion}
-                            disabled={isFirstQuestion}
-                        >
-                            ← 이전 문제
-                        </button>
+                                         {/* 네비게이션 버튼 */}
+                     <div style={{ 
+                         display: 'flex', 
+                         justifyContent: 'flex-end', 
+                         alignItems: 'center',
+                         gap: '12px'
+                     }}>
+                         {!isLastQuestion ? (
+                             <button
+                                 className="btn"
+                                 onClick={handleNextQuestion}
+                             >
+                                 다음 문제 →
+                             </button>
+                         ) : (
+                             <button
+                                 className="btn"
+                                 onClick={handleSubmitExam}
+                                 disabled={loading}
+                                 style={{ backgroundColor: 'var(--warn)', color: 'white' }}
+                             >
+                                 {loading ? '제출 중...' : '시험 제출'}
+                             </button>
+                         )}
+                     </div>
 
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {!isLastQuestion ? (
-                                <button
-                                    className="btn"
-                                    onClick={handleNextQuestion}
-                                >
-                                    다음 문제 →
-                                </button>
-                            ) : (
-                                <button
-                                    className="btn"
-                                    onClick={handleSubmitExam}
-                                    disabled={loading}
-                                    style={{ backgroundColor: 'var(--warn)', color: 'white' }}
-                                >
-                                    {loading ? '제출 중...' : '시험 제출'}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 문제 네비게이션 */}
-                    <div style={{ 
-                        marginTop: '24px', 
-                        padding: '16px', 
-                        backgroundColor: 'var(--hover)', 
-                        borderRadius: '8px'
-                    }}>
-                        <div style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--muted)' }}>
-                            문제 네비게이션
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {questions.map((_, index) => (
-                                <button
-                                    key={index}
-                                    className="btn"
-                                    style={{
-                                        minWidth: '40px',
-                                        height: '40px',
-                                        fontSize: '12px',
-                                        backgroundColor: index === currentQuestionIndex 
-                                            ? 'var(--accent)' 
-                                            : answers[index] 
-                                                ? 'var(--success)' 
-                                                : 'var(--border)',
-                                        color: index === currentQuestionIndex ? 'white' : 'var(--text)'
-                                    }}
-                                    onClick={() => {
-                                        setCurrentQuestionIndex(index);
-                                        navigate(`/student/exam/${examId}/question/${index + 1}`);
-                                    }}
-                                >
-                                    {index + 1}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                                         {/* 문제 진행 상황 표시 */}
+                     <div style={{ 
+                         marginTop: '24px', 
+                         padding: '16px', 
+                         backgroundColor: 'var(--hover)', 
+                         borderRadius: '8px'
+                     }}>
+                         <div style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--muted)' }}>
+                             문제 진행 상황
+                         </div>
+                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                             {questions.map((_, index) => (
+                                 <div
+                                     key={index}
+                                     style={{
+                                         minWidth: '40px',
+                                         height: '40px',
+                                         fontSize: '12px',
+                                         display: 'flex',
+                                         alignItems: 'center',
+                                         justifyContent: 'center',
+                                         backgroundColor: index === currentQuestionIndex 
+                                             ? 'var(--accent)' 
+                                             : index < currentQuestionIndex
+                                                 ? (answers[index] ? 'var(--success)' : 'var(--warn)')
+                                                 : 'var(--border)',
+                                         color: index === currentQuestionIndex ? 'white' : 'var(--text)',
+                                         borderRadius: '8px',
+                                         border: '1px solid var(--border)'
+                                     }}
+                                 >
+                                     {index + 1}
+                                 </div>
+                             ))}
+                         </div>
+                         <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '8px' }}>
+                             <span style={{ color: 'var(--accent)' }}>●</span> 현재 문제 | 
+                             <span style={{ color: 'var(--success)' }}>●</span> 완료 | 
+                             <span style={{ color: 'var(--warn)' }}>●</span> 미완료 | 
+                             <span style={{ color: 'var(--border)' }}>●</span> 미도달
+                         </div>
+                     </div>
 
                     {error && (
                         <div style={{ 

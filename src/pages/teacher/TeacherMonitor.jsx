@@ -62,6 +62,7 @@ export default function TeacherMonitor() {
                 navigationLinks={teacherNavigationLinks}
                 notifications={notifications}
                 onLogout={handleLogout}
+                userType="teacher"
             />
             <div className="container">
                 <div className="card">

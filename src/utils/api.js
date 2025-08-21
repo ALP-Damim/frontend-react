@@ -539,7 +539,7 @@ export const fetchExamBySessionId = async (sessionId) => {
 // 시험 문제 목록 조회 API
 export const fetchQuestionsByExamId = async (examId) => {
     try {
-        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/questions?examId=${examId}`);
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -550,6 +550,8 @@ export const fetchQuestionsByExamId = async (examId) => {
         return [];
     }
 };
+
+
 
 // 시험 제출 데이터 생성 API
 export const createSubmission = async (submissionData) => {
@@ -572,3 +574,31 @@ export const createSubmission = async (submissionData) => {
         throw error;
     }
 };
+
+// 개별 답안 제출 API
+export const submitAnswer = async (submissionId, questionId, answerData) => {
+    try {
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submissionId}/answers`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                questionId: questionId,
+                answer: answerData.answer,
+                submittedAt: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('답안 제출 실패:', error);
+        throw error;
+    }
+};
+
+

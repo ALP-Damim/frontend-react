@@ -1,7 +1,8 @@
 import { useLocation, useParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { RetryButton, Header } from "../../components/common";
 import { useUserStomp } from "../../hooks/useUserStomp";
+
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -17,14 +18,55 @@ function useQuery() {
 
 export default function Result(){
     const { examId } = useParams();
+    const location = useLocation();
     const q = useQuery();
-    const score = Number(q.score ?? 83);
+    
+    // 상태에서 데이터 가져오기
+    const exam = location.state?.exam;
+    const submission = location.state?.submission;
+    const answers = location.state?.answers || {};
+    const questions = location.state?.questions || [];
+    
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [advice, setAdvice] = useState(null);
     const [error, setError] = useState("");
     
     // STOMP 연결 관리
     const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
     const { handleLogout } = useUserStomp(studentId);
+
+    // 시험 결과 로드
+    useEffect(() => {
+        const loadResult = async () => {
+            try {
+                setLoading(true);
+                
+                // 답안을 기반으로 점수 계산
+                let totalScore = 0;
+                questions.forEach((question, index) => {
+                    const answer = answers[index] || '';
+                    if (answer === question.answerKey) {
+                        totalScore += question.points;
+                    }
+                });
+                
+                setResult({
+                    totalScore: totalScore,
+                    maxScore: questions.reduce((sum, q) => sum + q.points, 0),
+                    answers: answers,
+                    questions: questions
+                });
+            } catch (error) {
+                console.error('결과 로드 실패:', error);
+                setError('결과를 불러올 수 없습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadResult();
+    }, [answers, questions]);
 
     async function fetchAdvice(){
         // 가짜 LLM 호출 (실패 확률 40%)
@@ -41,19 +83,61 @@ export default function Result(){
         ]);
     }
 
+    if (loading) {
+        return (
+            <>
+                <Header 
+                    navigationLinks={studentNavigationLinks}
+                    notifications={[]}
+                    onLogout={handleLogout}
+                    userType="student"
+                />
+                <div className="container">
+                    <div className="card">
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <div style={{ color: 'var(--muted)' }}>결과를 불러오는 중...</div>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    const score = result?.totalScore || 0;
+    const maxScore = result?.maxScore || 100;
+
     return (
         <>
             <Header 
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
                 onLogout={handleLogout}
+                userType="student"
             />
             <div className="container">
                 <div className="grid">
             <div className="card">
-                <div className="badge">시험 ID: {examId}</div>
-                <h2>결과</h2>
-                <div style={{fontSize:42, margin:"10px 0"}}><b>{score}</b> / 100</div>
+                <div className="badge">시험: {exam?.name || examId}</div>
+                <h2>시험 결과</h2>
+                <div style={{fontSize:42, margin:"10px 0"}}>
+                    <b>{score}</b> / {maxScore}
+                </div>
+                <div style={{ 
+                    margin: '16px 0', 
+                    padding: '12px', 
+                    backgroundColor: 'var(--hover)', 
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                }}>
+                    <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+                        {score >= maxScore * 0.9 ? '🎉 우수' : 
+                         score >= maxScore * 0.8 ? '👍 양호' : 
+                         score >= maxScore * 0.6 ? '📝 보통' : '⚠️ 보강 필요'}
+                    </div>
+                    <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
+                        정답률: {Math.round((score / maxScore) * 100)}%
+                    </div>
+                </div>
                 <div style={{display:"flex", gap:8}}>
                     <button className="btn" onClick={fetchAdvice}>AI 조언 보기</button>
                     <RetryButton onTry={fetchAdvice} />
@@ -79,11 +163,48 @@ export default function Result(){
                     ))}
                 </div>
 
-                <h4 style={{marginTop:14}}>제출 답안 옆 AI 피드백(예시)</h4>
-                <ul>
-                    <li>Q1: <span className="badge">정답</span> · <button className="btn btn-outline">AI 피드백 보기</button></li>
-                    <li>Q2: <span className="badge">부분 정답</span> · Evidence: “과적합은 학습 데이터에 대한 오류가 낮고…”</li>
-                </ul>
+                <h4 style={{marginTop:14}}>제출 답안 상세</h4>
+                <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {questions.map((question, index) => {
+                        const answer = answers[index] || '';
+                        const isCorrect = answer === question.answerKey;
+                        const score = isCorrect ? question.points : 0;
+                        
+                        return (
+                            <div key={index} style={{ 
+                                marginBottom: '16px', 
+                                padding: '12px', 
+                                border: '1px solid var(--border)', 
+                                borderRadius: '8px',
+                                backgroundColor: 'var(--hover)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <strong>문제 {index + 1} ({question.points}점)</strong>
+                                    <span className="badge" style={{ 
+                                        backgroundColor: isCorrect ? 'var(--success)' : 'var(--warn)',
+                                        color: 'white'
+                                    }}>
+                                        {isCorrect ? '정답' : '오답'} ({score}점)
+                                    </span>
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                    <strong>문제:</strong> {question.body}
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                    <strong>제출 답안:</strong> {answer || '(답안 없음)'}
+                                </div>
+                                {!isCorrect && (
+                                    <div style={{ marginBottom: '8px' }}>
+                                        <strong>정답:</strong> {question.answerKey}
+                                    </div>
+                                )}
+                                <button className="btn btn-outline" style={{ fontSize: '12px' }}>
+                                    AI 피드백 보기
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
                 </div>
             </div>

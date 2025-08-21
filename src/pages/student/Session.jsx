@@ -92,15 +92,16 @@ export default function Session() {
                 return;
             }
             
-            // 2. Submission 데이터 생성
+            // 2. 빈 Submission 데이터 생성 (아직 제출되지 않은 상태)
             const submissionData = {
                 examId: exam.id,
                 userId: studentId,
-                submittedAt: new Date().toISOString(),
+                submittedAt: null, // 아직 제출되지 않음
                 totalScore: 0,
                 feedback: '',
                 feedbackStatus: 'NONE',
-                feedbackRetryCount: 0
+                feedbackRetryCount: 0,
+                status: 'IN_PROGRESS' // 진행 중 상태
             };
             
             const submission = await createSubmission(submissionData);
@@ -128,6 +129,7 @@ export default function Session() {
                 <Header 
                     navigationLinks={studentNavigationLinks}
                     notifications={[]}
+                    userType="student"
                 />
                 <div className="container">
                     <div className="card">
@@ -146,6 +148,7 @@ export default function Session() {
                 <Header 
                     navigationLinks={studentNavigationLinks}
                     notifications={[]}
+                    userType="student"
                 />
                 <div className="container">
                     <div className="card" style={{ borderColor: 'var(--warn)' }}>
@@ -163,6 +166,7 @@ export default function Session() {
             <Header 
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
+                userType="student"
             />
             <div className="container">
                 <div className="card" style={{ maxWidth: '600px', margin: '40px auto' }}>

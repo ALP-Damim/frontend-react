@@ -8,6 +8,7 @@ export default function Header({
     onLogout,
     logoText = "EduLearn",
     onMarkAllNotificationsRead,
+    userType = "student", // student, teacher, 또는 admin
 }) {
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
@@ -20,6 +21,16 @@ export default function Header({
         } else {
             // 기본 로그아웃 로직
             navigate('/');
+        }
+    };
+
+    const handleLogoClick = () => {
+        if (userType === "teacher") {
+            navigate('/teacher');
+        } else if (userType === "admin") {
+            navigate('/admin');
+        } else {
+            navigate('/student');
         }
     };
 
@@ -60,7 +71,7 @@ export default function Header({
     return (
         <div className="header-nav">
             <div className="header-nav-left">
-                <Link to="/" className="logo">{logoText}</Link>
+                <button onClick={handleLogoClick} className="logo" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>{logoText}</button>
                 {navigationLinks.map((link, index) => (
                     <Link 
                         key={index}
