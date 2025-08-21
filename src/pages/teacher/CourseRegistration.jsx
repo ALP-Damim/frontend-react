@@ -317,13 +317,13 @@ export default function CourseRegistration() {
                                     required
                                 >
                                     <option value="">시작 시간 선택</option>
-                                    {Array.from({ length: 17 }, (_, i) => {
-                                        const hour = Math.floor(i / 2) + 8; // 8시부터 시작
-                                        const minute = (i % 2) * 30; // 0분 또는 30분
+                                    {Array.from({ length: 144 }, (_, i) => {
+                                        const hour = Math.floor(i / 6); // 0시부터 23시까지
+                                        const minute = (i % 6) * 10; // 0분, 10분, 20분, 30분, 40분, 50분
                                         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                                         return (
                                             <option key={timeString} value={timeString}>
-                                                {hour}:{minute.toString().padStart(2, '0')}
+                                                {hour.toString().padStart(2, '0')}:{minute.toString().padStart(2, '0')}
                                             </option>
                                         );
                                     })}
@@ -341,13 +341,13 @@ export default function CourseRegistration() {
                                     required
                                 >
                                     <option value="">종료 시간 선택</option>
-                                    {Array.from({ length: 17 }, (_, i) => {
-                                        const hour = Math.floor(i / 2) + 8; // 8시부터 시작
-                                        const minute = (i % 2) * 30; // 0분 또는 30분
+                                    {Array.from({ length: 144 }, (_, i) => {
+                                        const hour = Math.floor(i / 6); // 0시부터 23시까지
+                                        const minute = (i % 6) * 10; // 0분, 10분, 20분, 30분, 40분, 50분
                                         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                                         return (
                                             <option key={timeString} value={timeString}>
-                                                {hour}:{minute.toString().padStart(2, '0')}
+                                                {hour.toString().padStart(2, '0')}:{minute.toString().padStart(2, '0')}
                                             </option>
                                         );
                                     })}

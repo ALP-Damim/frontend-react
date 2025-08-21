@@ -228,7 +228,7 @@ export const formatTimeToMinutes = (timeString) => {
     return timeString;
 };
 
-// 다음 강의 시작 시간 계산 유틸리티
+// 다음 강의 시작 시간 계산 유틸리티 (현재 진행 중인 강의 포함)
 export const calculateNextClassTime = (classes, limit = 1) => {
     if (!classes || classes.length === 0) return limit === 1 ? null : [];
     
@@ -238,50 +238,80 @@ export const calculateNextClassTime = (classes, limit = 1) => {
     
     const dayToNumber = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
     
-    // 모든 강의의 다음 시작 시간까지의 거리 계산
-    const classesWithDistance = classes
-        .map(course => {
-            if (!course.heldDaysString || !course.startsAt) return null;
-            
-            // 요일 문자열을 배열로 변환
-            const days = course.heldDaysString.split(',').map(d => d.trim());
-            let minDaysDiff = Infinity;
-            let minTimeDiff = Infinity;
-            
-            days.forEach(day => {
-                const dayNumber = dayToNumber[day];
-                if (dayNumber === undefined) return;
-                
-                // 강의 시작 시간을 분으로 변환
-                const [hours, minutes] = course.startsAt.split(':').map(Number);
-                const classTime = hours * 60 + minutes;
-                
-                // 현재 요일과의 차이 계산
-                let daysDiff = dayNumber - currentDay;
-                if (daysDiff < 0) daysDiff += 7; // 다음 주로 이동
-                if (daysDiff === 0 && classTime <= currentTime) {
-                    daysDiff = 7; // 오늘 이미 지난 시간이면 다음 주로
-                }
-                
-                // 가장 가까운 시간 찾기
-                if (daysDiff < minDaysDiff || (daysDiff === minDaysDiff && classTime < minTimeDiff)) {
-                    minDaysDiff = daysDiff;
-                    minTimeDiff = classTime;
-                }
-            });
-            
-            return { ...course, daysDiff: minDaysDiff, timeDiff: minTimeDiff };
-        })
-        .filter(course => course && course.daysDiff !== Infinity)
-        .sort((a, b) => {
-            if (a.daysDiff !== b.daysDiff) {
-                return a.daysDiff - b.daysDiff;
-            }
-            return a.timeDiff - b.timeDiff;
-        })
-        .slice(0, limit);
+    // 현재 진행 중인 강의와 곧 시작할 강의들을 분리
+    const currentClasses = [];
+    const upcomingClasses = [];
     
-    return limit === 1 ? (classesWithDistance[0] || null) : classesWithDistance;
+    classes.forEach(course => {
+        if (!course.heldDaysString || !course.startsAt || !course.endsAt) return;
+        
+        // 요일 문자열을 배열로 변환
+        const days = course.heldDaysString.split(',').map(d => d.trim());
+        let isCurrentClass = false;
+        let minDaysDiff = Infinity;
+        let minTimeDiff = Infinity;
+        
+        days.forEach(day => {
+            const dayNumber = dayToNumber[day];
+            if (dayNumber === undefined) return;
+            
+            // 강의 시작/종료 시간을 분으로 변환
+            const [startHours, startMinutes] = course.startsAt.split(':').map(Number);
+            const [endHours, endMinutes] = course.endsAt.split(':').map(Number);
+            const classStartTime = startHours * 60 + startMinutes;
+            const classEndTime = endHours * 60 + endMinutes;
+            
+            // 오늘 진행 중인 강의인지 확인
+            if (dayNumber === currentDay) {
+                // 수업 10분 전부터 수업 종료 10분 후까지
+                const entryStartTime = classStartTime - 10;
+                const entryEndTime = classEndTime + 10;
+                
+                if (currentTime >= entryStartTime && currentTime <= entryEndTime) {
+                    isCurrentClass = true;
+                }
+            }
+            
+            // 현재 요일과의 차이 계산
+            let daysDiff = dayNumber - currentDay;
+            if (daysDiff < 0) daysDiff += 7; // 다음 주로 이동
+            if (daysDiff === 0 && classStartTime <= currentTime) {
+                daysDiff = 7; // 오늘 이미 지난 시간이면 다음 주로
+            }
+            
+            // 가장 가까운 시간 찾기
+            if (daysDiff < minDaysDiff || (daysDiff === minDaysDiff && classStartTime < minTimeDiff)) {
+                minDaysDiff = daysDiff;
+                minTimeDiff = classStartTime;
+            }
+        });
+        
+        if (isCurrentClass) {
+            currentClasses.push({ ...course, isCurrent: true, daysDiff: 0, timeDiff: 0 });
+        } else {
+            upcomingClasses.push({ ...course, isCurrent: false, daysDiff: minDaysDiff, timeDiff: minTimeDiff });
+        }
+    });
+    
+    // 현재 진행 중인 강의를 먼저 정렬 (시작 시간 순)
+    currentClasses.sort((a, b) => {
+        const [aHours, aMinutes] = a.startsAt.split(':').map(Number);
+        const [bHours, bMinutes] = b.startsAt.split(':').map(Number);
+        return (aHours * 60 + aMinutes) - (bHours * 60 + bMinutes);
+    });
+    
+    // 곧 시작할 강의들을 정렬
+    upcomingClasses.sort((a, b) => {
+        if (a.daysDiff !== b.daysDiff) {
+            return a.daysDiff - b.daysDiff;
+        }
+        return a.timeDiff - b.timeDiff;
+    });
+    
+    // 현재 진행 중인 강의와 곧 시작할 강의를 합치고 limit만큼 반환
+    const allClasses = [...currentClasses, ...upcomingClasses].slice(0, limit);
+    
+    return limit === 1 ? (allClasses[0] || null) : allClasses;
 };
 
 // 강좌 등록 API
@@ -379,4 +409,84 @@ export const markAllNotificationsAsRead = async (userId) => {
     }
     
     return response.json();
+};
+
+// 강의 입장 가능 시간 체크 (수업 10분 전 ~ 수업 종료 10분 후)
+export const isClassEntryAvailable = (classData) => {
+    if (!classData.startsAt || !classData.endsAt) return false;
+    
+    const now = new Date();
+    const currentDay = now.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
+    const currentTime = now.getHours() * 60 + now.getMinutes(); // 현재 시간을 분으로 변환
+    
+    // 요일 체크
+    const dayToNumber = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
+    const heldDays = classData.heldDaysString?.split(',').map(d => d.trim()) || [];
+    const isToday = heldDays.some(day => dayToNumber[day] === currentDay);
+    
+    if (!isToday) return false;
+    
+    // 시간 체크
+    const [startHour, startMin] = classData.startsAt.split(':').map(Number);
+    const [endHour, endMin] = classData.endsAt.split(':').map(Number);
+    const classStartTime = startHour * 60 + startMin;
+    const classEndTime = endHour * 60 + endMin;
+    
+    // 수업 10분 전부터 수업 종료 10분 후까지
+    const entryStartTime = classStartTime - 10;
+    const entryEndTime = classEndTime + 10;
+    
+    return currentTime >= entryStartTime && currentTime <= entryEndTime;
+};
+
+// 현재 진행 중인 세션 ID 조회
+export const fetchCurrentSession = async (classId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/classes/${classId}/current`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('현재 세션 조회 실패:', error);
+        return null;
+    }
+};
+
+// 시험 정보 조회 API
+export const fetchExamBySessionId = async (sessionId) => {
+    try {
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams?sessionId=${sessionId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const exams = await response.json();
+        // sessionId에 해당하는 시험 중 첫 번째 것을 반환
+        return Array.isArray(exams) && exams.length > 0 ? exams[0] : null;
+    } catch (error) {
+        console.error('시험 정보 조회 실패:', error);
+        return null;
+    }
+};
+
+// 출석 생성 API
+export const createAttendance = async (attendanceData) => {
+    try {
+        const response = await fetch('https://team02-apim.azure-api.net/student/attendance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(attendanceData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('출석 생성 실패:', error);
+        throw error;
+    }
 };

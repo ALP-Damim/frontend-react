@@ -1,5 +1,5 @@
 import { Routes, Route, Link, NavLink } from "react-router-dom";
-import { DashboardStudent, Exam, Result, StudentStep, StudentMyPage } from "./pages/student";
+import { DashboardStudent, Exam, Result, StudentStep, StudentMyPage, Session } from "./pages/student";
 import MyCourses from "./pages/student/MyCourses.jsx";
 import CourseApplication from "./pages/student/CourseApplication.jsx";
 import StudentClassDetail from "./pages/student/StudentClassDetail.jsx";
@@ -46,6 +46,7 @@ export default function App() {
                 <Route path="/student" element={<DashboardStudent />} />
                 <Route path="/student/courses" element={<MyCourses />} />
                 <Route path="/student/class/:classId" element={<StudentClassDetail />} />
+                <Route path="/student/session/:classId" element={<Session />} />
                 <Route path="/course-application" element={<CourseApplication />} />
                 <Route path="/teacher" element={<DashboardTeacher />} />
                 <Route path="/teacher/class/:classId" element={<ClassManagement />} />

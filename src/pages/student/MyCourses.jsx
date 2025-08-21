@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "../../components/common";
-import { fetchStudentClasses, formatTimeToMinutes } from "../../utils/api";
+import { fetchStudentClasses, formatTimeToMinutes, isClassEntryAvailable } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 학생용 네비게이션 링크 (상단바 동일 구성)
@@ -17,6 +17,7 @@ export default function MyCourses(){
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+    const navigate = useNavigate();
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
@@ -43,6 +44,11 @@ export default function MyCourses(){
     }, [studentId]);
 
     const totalCount = useMemo(() => classes?.length ?? 0, [classes]);
+
+    // 강의 입장 핸들러
+    const handleClassEntry = (classData) => {
+        navigate(`/student/session/${classData.classId}`);
+    };
 
     return (
         <>
@@ -77,8 +83,17 @@ export default function MyCourses(){
                                     {(c.teacherName ?? '담당교수 미정')} · {(c.heldDaysString ?? '요일 미정')} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                 </div>
                                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                                    {c.zoomUrl && (
-                                        <a className="btn" href={c.zoomUrl} target="_blank" rel="noopener noreferrer">Zoom 입장</a>
+                                    {isClassEntryAvailable(c) ? (
+                                        <button 
+                                            className="btn" 
+                                            onClick={() => handleClassEntry(c)}
+                                        >
+                                            강의 입장
+                                        </button>
+                                    ) : (
+                                        <button className="btn" disabled>
+                                            강의 입장
+                                        </button>
                                     )}
                                     <Link className="btn btn-outline" to={`/student/class/${c.classId}`}>상세</Link>
                                 </div>

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Header, AlarmStatusIndicator } from "../../components/common";
-import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
+import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime, createAttendance, fetchCurrentSession } from "../../utils/api";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
 import { useUserStomp } from "../../hooks/useUserStomp";
 
@@ -91,6 +91,34 @@ export default function DashboardTeacher() {
         return groups;
     }, [classes]);
 
+    // 강의실 입장 핸들러
+    const handleClassEntry = async (classData) => {
+        try {
+            // 현재 세션 정보 조회
+            const sessionData = await fetchCurrentSession(classData.classId);
+            
+            if (sessionData && sessionData.sessionId) {
+                // 강사는 항상 출석으로 기록
+                const attendanceData = {
+                    sessionId: sessionData.sessionId,
+                    studentId: teacherId, // 강사 ID를 studentId로 사용
+                    status: 'PRESENT',
+                    note: '강사 입장'
+                };
+                
+                await createAttendance(attendanceData);
+                console.log('강사 출석이 기록되었습니다:', attendanceData);
+            }
+            
+            // 강의실로 이동
+            window.location.href = `/teacher/course/${classData.classId}`;
+        } catch (error) {
+            console.error('강사 출석 기록 실패:', error);
+            // 출석 기록에 실패해도 강의실로 이동
+            window.location.href = `/teacher/course/${classData.classId}`;
+        }
+    };
+
     return (
         <>
             <Header 
@@ -122,7 +150,13 @@ export default function DashboardTeacher() {
                                 <div className="course-card">
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                         <div className="course-title">{nextClass.className}</div>
-                                        <span className="badge">진행중</span>
+                                        {nextClass.isCurrent ? (
+                                            <span className="badge" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
+                                                진행중
+                                            </span>
+                                        ) : (
+                                            <span className="badge">예정</span>
+                                        )}
                                     </div>
                                     <div className="course-info" style={{ marginBottom: '16px' }}>
                                         {nextClass.teacherName} · {nextClass.heldDaysString} · {formatTimeToMinutes(nextClass.startsAt)}~{formatTimeToMinutes(nextClass.endsAt)}
@@ -133,9 +167,12 @@ export default function DashboardTeacher() {
                                                 Zoom 입장
                                             </a>
                                         )}
-                                        <Link className="btn btn-outline" to={`/teacher/course/${nextClass.classId}`}>
-                                            강의실 입장
-                                        </Link>
+                                        <button 
+                                            className="btn btn-outline"
+                                            onClick={() => handleClassEntry(nextClass)}
+                                        >
+                                            {nextClass.isCurrent ? '강의실 참여' : '강의실 입장'}
+                                        </button>
                                     </div>
                                 </div>
                             ) : (
@@ -160,9 +197,12 @@ export default function DashboardTeacher() {
                                                 {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                <Link className="btn" to={`/teacher/course/${course.classId}`}>
+                                                <button 
+                                                    className="btn"
+                                                    onClick={() => handleClassEntry(course)}
+                                                >
                                                     강의실 입장
-                                                </Link>
+                                                </button>
                                                 <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
                                                     관리
                                                 </Link>

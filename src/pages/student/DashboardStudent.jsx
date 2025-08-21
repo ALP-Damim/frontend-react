@@ -1,8 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ScoreChart } from "../../components/student";
 import { Header, AlarmStatusIndicator } from "../../components/common";
-import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
+import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime, isClassEntryAvailable, createAttendance, fetchCurrentSession } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
 
@@ -41,6 +41,7 @@ export default function DashboardStudent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+    const navigate = useNavigate();
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
@@ -94,6 +95,52 @@ export default function DashboardStudent() {
         return groups;
     }, [classes]);
 
+    // 강의 입장 핸들러
+    const handleClassEntry = async (classData) => {
+        try {
+            // 현재 세션 정보 조회
+            const sessionData = await fetchCurrentSession(classData.classId);
+            
+            if (sessionData && sessionData.sessionId) {
+                // 출석 상태 결정 (현재 시간과 강의 시작 시간 비교)
+                const now = new Date();
+                const [startHour, startMin] = classData.startsAt.split(':').map(Number);
+                const classStartTime = new Date();
+                classStartTime.setHours(startHour, startMin, 0, 0);
+                
+                // 10분 지각 기준
+                const lateThreshold = new Date(classStartTime.getTime() + 10 * 60 * 1000);
+                
+                let status = 'PRESENT';
+                let note = '';
+                
+                if (now > lateThreshold) {
+                    status = 'LATE';
+                    const minutesLate = Math.floor((now - classStartTime) / (1000 * 60));
+                    note = `${minutesLate}분 지각`;
+                }
+                
+                // 출석 데이터 생성
+                const attendanceData = {
+                    sessionId: sessionData.sessionId,
+                    studentId: studentId,
+                    status: status,
+                    note: note
+                };
+                
+                await createAttendance(attendanceData);
+                console.log('출석이 기록되었습니다:', attendanceData);
+            }
+            
+            // 강의실로 이동
+            navigate(`/student/session/${classData.classId}`);
+        } catch (error) {
+            console.error('출석 기록 실패:', error);
+            // 출석 기록에 실패해도 강의실로 이동
+            navigate(`/student/session/${classData.classId}`);
+        }
+    };
+
     return (
         <>
             <Header 
@@ -123,16 +170,31 @@ export default function DashboardStudent() {
                                 <div style={{ color: 'var(--muted)' }}>불러오는 중...</div>
                             ) : (
                                 <div>
-                                    {nearestThree.length > 0 ? nearestThree.map((c) => (
+                                    {nearestThree.length > 0 ? nearestThree.map((c, index) => (
                                         <div key={c.classId} className="course-card">
-                                            <div className="course-title">{c.className}</div>
-                                            {/* <div className="badge">{c.semester}</div> */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                                <div className="course-title">{c.className}</div>
+                                                {c.isCurrent && (
+                                                    <span className="badge" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
+                                                        진행중
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="course-info">
                                                 {c.teacherName} · {c.heldDaysString} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                             </div>
                                             <div style={{ marginTop: '12px', display: 'flex', gap: 8 }}>
-                                                {c.zoomUrl && (
-                                                    <a className="btn" href={c.zoomUrl} target="_blank" rel="noopener noreferrer">Zoom 입장</a>
+                                                {index === 0 && isClassEntryAvailable(c) ? (
+                                                    <button 
+                                                        className="btn" 
+                                                        onClick={() => handleClassEntry(c)}
+                                                    >
+                                                        {c.isCurrent ? '강의 참여' : '강의 입장'}
+                                                    </button>
+                                                ) : (
+                                                    <button className="btn" disabled>
+                                                        {c.isCurrent ? '강의 참여' : '강의 입장'}
+                                                    </button>
                                                 )}
                                                 <Link className="btn btn-outline" to={`/student/class/${c.classId}`}>상세</Link>
                                             </div>
