@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ScoreChart } from "../../components/student";
-import { Header } from "../../components/common";
+import { Header, AlarmStatusIndicator } from "../../components/common";
 import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
+import { useClassAlarm } from "../../hooks/useClassAlarm";
 
 // 하드코딩된 데이터 (추천 강의 예시)
 const recommendedCourses = [
@@ -43,6 +44,15 @@ export default function DashboardStudent() {
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
+
+    // 알람 관리
+    const { clearAllAlarms } = useClassAlarm(classes, studentId);
+
+    // 로그아웃 시 알람도 함께 취소
+    const handleLogoutWithAlarm = () => {
+        clearAllAlarms();
+        handleLogout();
+    };
 
     useEffect(() => {
         const load = async () => {
@@ -89,7 +99,7 @@ export default function DashboardStudent() {
             <Header 
                 navigationLinks={studentNavigationLinks}
                 notifications={[]}
-                onLogout={handleLogout}
+                onLogout={handleLogoutWithAlarm}
             />
             <div className="container">
                 {error && (
@@ -97,8 +107,11 @@ export default function DashboardStudent() {
                         <div style={{ color: 'var(--warn)' }}>{error}</div>
                     </div>
                 )}
-                
 
+                {/* 알람 상태 표시 */}
+                <div className="card" style={{ marginBottom: 16 }}>
+                    <AlarmStatusIndicator classes={classes} />
+                </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                     {/* 왼쪽 2/3 컬럼 */}

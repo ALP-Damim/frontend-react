@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { Header } from "../../components/common";
+import { Header, AlarmStatusIndicator } from "../../components/common";
 import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
+import { useClassAlarm } from "../../hooks/useClassAlarm";
 
 // 요일 매핑
 const dayNames = ["일", "월", "화", "수", "목", "금", "토"]; // 0~6 (일~토)
@@ -36,6 +37,16 @@ export default function DashboardTeacher() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+
+    // 알람 관리
+    const { clearAllAlarms } = useClassAlarm(classes, teacherId);
+
+    // 로그아웃 시 알람도 함께 취소
+    const handleLogoutWithAlarm = () => {
+        clearAllAlarms();
+        // 여기에 실제 로그아웃 로직 추가
+        console.log('로그아웃 및 알람 취소');
+    };
 
     useEffect(() => {
         const load = async () => {
@@ -82,6 +93,7 @@ export default function DashboardTeacher() {
             <Header 
                 navigationLinks={teacherNavigationLinks}
                 notifications={notifications}
+                onLogout={handleLogoutWithAlarm}
             />
             <div className="container">
                 {error && (
@@ -89,6 +101,12 @@ export default function DashboardTeacher() {
                         <div style={{ color: 'var(--warn)' }}>{error}</div>
                     </div>
                 )}
+                
+                {/* 알람 상태 표시 */}
+                <div className="card" style={{ marginBottom: 16 }}>
+                    <AlarmStatusIndicator classes={classes} />
+                </div>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
                     {/* 왼쪽 2/3 - 내가 하고 있는 강의 */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
