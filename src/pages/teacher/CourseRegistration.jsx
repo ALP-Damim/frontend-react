@@ -45,7 +45,8 @@ export default function CourseRegistration() {
     
     const [formData, setFormData] = useState({
         className: '',
-        semester: '2024-2',
+        schoolYear: '',
+        subject: '',
         zoomUrl: '',
         startsAt: '',
         endsAt: '',
@@ -157,6 +158,16 @@ export default function CourseRegistration() {
             return;
         }
         
+        if (!formData.schoolYear) {
+            setError("학년을 선택해주세요.");
+            return;
+        }
+        
+        if (!formData.subject) {
+            setError("과목을 선택해주세요.");
+            return;
+        }
+        
         if (selectedDays.length === 0) {
             setError("요일을 선택해주세요.");
             return;
@@ -186,7 +197,9 @@ export default function CourseRegistration() {
                 teacherId,
                 teacherName: teacherProfile?.name || "강사",
                 className: formData.className.trim(),
-                semester: formData.semester,
+                semester: '2025-2', // 강제로 2025-2 선택
+                schoolYear: formData.schoolYear,
+                subject: formData.subject,
                 zoomUrl: formData.zoomUrl.trim() || null,
                 heldDay: calculateHeldDay(),
                 startsAt: formData.startsAt + ':00',
@@ -260,21 +273,53 @@ export default function CourseRegistration() {
                             />
                         </div>
 
-                        {/* 학기 */}
+                        {/* 학년 */}
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                                학기 *
+                                학년 *
                             </label>
                             <select
-                                name="semester"
-                                value={formData.semester}
+                                name="schoolYear"
+                                value={formData.schoolYear}
                                 onChange={handleInputChange}
                                 style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                required
                             >
-                                <option value="2024-1">2024-1</option>
-                                <option value="2024-2">2024-2</option>
-                                <option value="2025-1">2025-1</option>
-                                <option value="2025-2">2025-2</option>
+                                <option value="">학년 선택</option>
+                                <option value="1">1학년</option>
+                                <option value="2">2학년</option>
+                                <option value="3">3학년</option>
+                                <option value="4">4학년</option>
+                                <option value="5">5학년</option>
+                                <option value="6">6학년</option>
+                            </select>
+                        </div>
+
+                        {/* 과목 */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                                과목 *
+                            </label>
+                            <select
+                                name="subject"
+                                value={formData.subject}
+                                onChange={handleInputChange}
+                                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                                required
+                            >
+                                <option value="">과목 선택</option>
+                                <option value="국어">국어</option>
+                                <option value="수학">수학</option>
+                                <option value="영어">영어</option>
+                                <option value="사회">사회</option>
+                                <option value="과학">과학</option>
+                                <option value="체육">체육</option>
+                                <option value="음악">음악</option>
+                                <option value="미술">미술</option>
+                                <option value="도덕">도덕</option>
+                                <option value="실과">실과</option>
+                                <option value="컴퓨터">컴퓨터</option>
+                                <option value="기타">기타</option>
                             </select>
                         </div>
 
