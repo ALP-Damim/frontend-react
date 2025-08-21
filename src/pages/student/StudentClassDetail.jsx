@@ -13,7 +13,7 @@ const studentNavigationLinks = [
 
 export default function StudentClassDetail() {
     // 실제 로그인 연동 시 교체
-    const studentId = 11;
+    const studentId = 21;
     const { classId } = useParams();
     
     // STOMP 연결 관리

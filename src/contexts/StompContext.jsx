@@ -21,6 +21,22 @@ export const StompProvider = ({ children }) => {
     const addLog = (message, type = 'info') => {
         const timestamp = new Date().toLocaleTimeString();
         setLogs(prev => [...prev.slice(-9), { message, type, timestamp }]);
+        
+        // 콘솔에도 로그 출력
+        const logMessage = `[STOMP ${type.toUpperCase()}] ${message}`;
+        switch (type) {
+            case 'error':
+                console.error(logMessage);
+                break;
+            case 'warning':
+                console.warn(logMessage);
+                break;
+            case 'success':
+                console.log(logMessage);
+                break;
+            default:
+                console.log(logMessage);
+        }
     };
 
     // STOMP 연결

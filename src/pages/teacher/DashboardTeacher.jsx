@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Header, AlarmStatusIndicator } from "../../components/common";
 import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime } from "../../utils/api";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
+import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 요일 매핑
 const dayNames = ["일", "월", "화", "수", "목", "금", "토"]; // 0~6 (일~토)
@@ -37,6 +38,9 @@ export default function DashboardTeacher() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+    
+    // STOMP 연결 관리
+    const { handleLogout } = useUserStomp(teacherId);
 
     // 알람 관리
     const { clearAllAlarms } = useClassAlarm(classes, teacherId);
@@ -44,8 +48,7 @@ export default function DashboardTeacher() {
     // 로그아웃 시 알람도 함께 취소
     const handleLogoutWithAlarm = () => {
         clearAllAlarms();
-        // 여기에 실제 로그아웃 로직 추가
-        console.log('로그아웃 및 알람 취소');
+        handleLogout();
     };
 
     useEffect(() => {

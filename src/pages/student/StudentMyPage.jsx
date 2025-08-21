@@ -17,7 +17,7 @@ const studentTabs = [
 
 export default function StudentMyPage() {
     // 실제 로그인 연동 시 교체
-    const studentId = 11;
+    const studentId = 21;
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
@@ -32,7 +32,7 @@ export default function StudentMyPage() {
             defaultActiveTab="profile"
             userId={studentId}
             onLogout={handleLogout}
-            showStompStatus={true}
+            showStompStatus={false}
         />
     );
 }
