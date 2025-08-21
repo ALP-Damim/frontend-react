@@ -49,7 +49,7 @@ export default function App() {
                 <Route path="/student" element={<DashboardStudent />} />
                 <Route path="/student/courses" element={<MyCourses />} />
                 <Route path="/student/class/:classId" element={<StudentClassDetail />} />
-                <Route path="/student/session/:classId" element={<Session />} />
+                <Route path="/student/session/:sessionId" element={<Session />} />
                 <Route path="/student/exam/:examId/question/:questionNumber" element={<ExamQuestion />} />
                 <Route path="/course-application" element={<CourseApplication />} />
                                  <Route path="/teacher" element={<DashboardTeacher />} />
@@ -62,7 +62,7 @@ export default function App() {
                 <Route path="/exam/:examId" element={<Exam />} />
                 <Route path="/exam/:examId/step" element={<StudentStep />} />
                 <Route path="/teacher/:examId/monitor" element={<TeacherMonitor />} />
-                <Route path="/result/:examId" element={<Result />} />
+                <Route path="/student/result/:examId" element={<Result />} />
                 <Route path="/mypage" element={<StudentMyPage />} />
                 <Route path="/rag" element={<RAG />} />
                 <Route path="/notifications" element={<NotificationLog />} />

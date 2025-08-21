@@ -519,12 +519,15 @@ export const createAttendance = async (attendanceData) => {
 
 // 시험 정보 조회 API (GET 방식)
 export const fetchExamBySessionId = async (sessionId) => {
+    console.log('fetchExamBySessionId called with sessionId:', sessionId);
     try {
         const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams?sessionId=${sessionId}`);
+        console.log('fetchExamBySessionId response status:', response.status);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         const exams = await response.json();
+        console.log('fetchExamBySessionId response data:', exams);
         // sessionId에 해당하는 시험 중 첫 번째 것을 반환
         return Array.isArray(exams) && exams.length > 0 ? exams[0] : null;
     } catch (error) {

@@ -148,21 +148,13 @@ export default function ClassDetail({
 
                     {/* 강의 정보 */}
                     <div className="card" style={{ marginBottom: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-                            <div>
-                                <h1 style={{ fontSize: '1.8rem', marginBottom: '8px', color: 'var(--accent)' }}>
-                                    {classInfo.className}
-                                </h1>
-                                <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
-                                    {classInfo.teacherName} · {classInfo.semester}
-                                </div>
+                        <div style={{ marginBottom: '16px' }}>
+                            <h1 style={{ fontSize: '1.8rem', marginBottom: '8px', color: 'var(--accent)' }}>
+                                {classInfo.className}
+                            </h1>
+                            <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
+                                {classInfo.teacherName} · {classInfo.semester}
                             </div>
-                            <button 
-                                className="btn btn-outline" 
-                                onClick={() => navigate(-1)}
-                            >
-                                뒤로 가기
-                            </button>
                         </div>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '14px' }}>
@@ -171,9 +163,13 @@ export default function ClassDetail({
                             </div>
                             <div>
                                 <strong>줌 URL:</strong> {classInfo.zoomUrl ? (
-                                    <a href={classInfo.zoomUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
-                                        링크
-                                    </a>
+                                    <button 
+                                        className="btn" 
+                                        style={{ backgroundColor: 'var(--accent)', color: 'white', fontSize: '12px', padding: '4px 8px' }}
+                                        onClick={() => window.open(classInfo.zoomUrl, '_blank', 'noopener,noreferrer')}
+                                    >
+                                        줌 입장
+                                    </button>
                                 ) : '없음'}
                             </div>
                         </div>

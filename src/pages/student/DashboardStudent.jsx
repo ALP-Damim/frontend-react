@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { ScoreChart } from "../../components/student";
 import { Header, AlarmStatusIndicator } from "../../components/common";
-import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime, isClassEntryAvailable, createAttendance, fetchCurrentSession } from "../../utils/api";
+import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime, isClassEntryAvailable, createAttendance, fetchCurrentSession, findNearestFutureSession } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
 
@@ -41,6 +41,7 @@ export default function DashboardStudent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+    const [sessionData, setSessionData] = useState({}); // 각 강의별 세션 정보 저장
     const navigate = useNavigate();
     
     // STOMP 연결 관리
@@ -61,7 +62,34 @@ export default function DashboardStudent() {
                 setLoading(true);
                 setError(null);
                 const data = await fetchStudentClasses(studentId);
-                setClasses(Array.isArray(data) ? data : []);
+                const classesArray = Array.isArray(data) ? data : [];
+                setClasses(classesArray);
+                
+                // 곧 시작하는 강의들의 세션 정보 미리 조회
+                const nearestThree = calculateNextClassTime(classesArray, 3);
+                const sessionPromises = nearestThree.map(async (classData) => {
+                    try {
+                        const session = await findNearestFutureSession(classData.classId);
+                        return {
+                            classId: classData.classId,
+                            session: session
+                        };
+                    } catch (error) {
+                        console.error(`강의 ${classData.classId} 세션 정보 로드 실패:`, error);
+                        return {
+                            classId: classData.classId,
+                            session: null
+                        };
+                    }
+                });
+                
+                const sessionResults = await Promise.all(sessionPromises);
+                const sessionDataMap = {};
+                sessionResults.forEach(result => {
+                    sessionDataMap[result.classId] = result.session;
+                });
+                setSessionData(sessionDataMap);
+                
             } catch (e) {
                 setError("수강 강좌를 불러오지 못했습니다.");
             } finally {
@@ -98,49 +126,57 @@ export default function DashboardStudent() {
     // 강의 입장 핸들러
     const handleClassEntry = async (classData) => {
         try {
-            // 현재 세션 정보 조회
-            const sessionData = await fetchCurrentSession(classData.classId);
+            // 미리 조회된 세션 정보 사용
+            const session = sessionData[classData.classId];
             
-            // sessionData가 null이거나 sessionId가 없는 경우 출석 기록하지 않음
-            if (sessionData && sessionData.sessionId && typeof sessionData.sessionId === 'number') {
-                // 출석 상태 결정 (현재 시간과 강의 시작 시간 비교)
-                const now = new Date();
-                const [startHour, startMin] = classData.startsAt.split(':').map(Number);
-                const classStartTime = new Date();
-                classStartTime.setHours(startHour, startMin, 0, 0);
-                
-                // 10분 지각 기준
-                const lateThreshold = new Date(classStartTime.getTime() + 10 * 60 * 1000);
-                
-                let status = 'PRESENT';
-                let note = '';
-                
-                if (now > lateThreshold) {
-                    status = 'LATE';
-                    const minutesLate = Math.floor((now - classStartTime) / (1000 * 60));
-                    note = `${minutesLate}분 지각`;
-                }
-                
-                // 출석 데이터 생성
-                const attendanceData = {
-                    sessionId: sessionData.sessionId,
-                    studentId: studentId,
-                    status: status,
-                    note: note
-                };
-                
-                await createAttendance(attendanceData);
-                console.log('출석이 기록되었습니다:', attendanceData);
-            } else {
-                console.log('현재 진행 중인 세션이 없어 출석을 기록하지 않습니다.');
+            // session이 null이거나 sessionId가 없는 경우 처리
+            if (!session || !session.sessionId || typeof session.sessionId !== 'number') {
+                console.log('세션 정보가 없어 강의에 입장할 수 없습니다.');
+                alert('현재 진행 중인 세션이 없습니다.');
+                return;
             }
             
-            // 강의실로 이동
-            navigate(`/student/session/${classData.classId}`);
+            // 출석 상태 결정 (현재 시간과 강의 시작 시간 비교)
+            const now = new Date();
+            const [startHour, startMin] = classData.startsAt.split(':').map(Number);
+            const classStartTime = new Date();
+            classStartTime.setHours(startHour, startMin, 0, 0);
+            
+            // 10분 지각 기준
+            const lateThreshold = new Date(classStartTime.getTime() + 10 * 60 * 1000);
+            
+            let status = 'PRESENT';
+            let note = '';
+            
+            if (now > lateThreshold) {
+                status = 'LATE';
+                const minutesLate = Math.floor((now - classStartTime) / (1000 * 60));
+                note = `${minutesLate}분 지각`;
+            }
+            
+            // 출석 데이터 생성
+            const attendanceData = {
+                sessionId: session.sessionId,
+                studentId: studentId,
+                status: status,
+                note: note
+            };
+            
+            // 출석 기록
+            await createAttendance(attendanceData);
+            console.log('출석이 기록되었습니다:', attendanceData);
+            
+            // 세션 ID를 이용해서 시험 대기 페이지로 이동
+            navigate(`/student/session/${session.sessionId}`);
         } catch (error) {
             console.error('출석 기록 실패:', error);
-            // 출석 기록에 실패해도 강의실로 이동
-            navigate(`/student/session/${classData.classId}`);
+            // 출석 기록에 실패해도 세션 정보가 있으면 강의실로 이동
+            const session = sessionData[classData.classId];
+            if (session && session.sessionId) {
+                navigate(`/student/session/${session.sessionId}`);
+            } else {
+                alert('강의 입장에 실패했습니다.');
+            }
         }
     };
 

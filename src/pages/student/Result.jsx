@@ -1,6 +1,14 @@
 import { useLocation, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
-import { RetryButton } from "../../components/common";
+import { RetryButton, Header } from "../../components/common";
+import { useUserStomp } from "../../hooks/useUserStomp";
+
+// 학생용 네비게이션 링크
+const studentNavigationLinks = [
+    { to: "/student/courses", text: "내강의" },
+    { to: "/course-application", text: "강의신청" },
+    { to: "/mypage", text: "마이페이지" }
+];
 
 function useQuery() {
     const { search } = useLocation();
@@ -13,6 +21,10 @@ export default function Result(){
     const score = Number(q.score ?? 83);
     const [advice, setAdvice] = useState(null);
     const [error, setError] = useState("");
+    
+    // STOMP 연결 관리
+    const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
+    const { handleLogout } = useUserStomp(studentId);
 
     async function fetchAdvice(){
         // 가짜 LLM 호출 (실패 확률 40%)
@@ -30,7 +42,14 @@ export default function Result(){
     }
 
     return (
-        <div className="grid">
+        <>
+            <Header 
+                navigationLinks={studentNavigationLinks}
+                notifications={[]}
+                onLogout={handleLogout}
+            />
+            <div className="container">
+                <div className="grid">
             <div className="card">
                 <div className="badge">시험 ID: {examId}</div>
                 <h2>결과</h2>
@@ -66,6 +85,8 @@ export default function Result(){
                     <li>Q2: <span className="badge">부분 정답</span> · Evidence: “과적합은 학습 데이터에 대한 오류가 낮고…”</li>
                 </ul>
             </div>
-        </div>
+                </div>
+            </div>
+        </>
     );
 }

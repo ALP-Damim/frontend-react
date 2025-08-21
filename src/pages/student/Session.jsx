@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/common';
-import { fetchCurrentSession, fetchExamBySessionId, fetchQuestionsByExamId, createSubmission, createAttendance } from '../../utils/api';
+import { fetchExamBySessionId, fetchQuestionsByExamId, createSubmission } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -11,66 +11,48 @@ const studentNavigationLinks = [
 ];
 
 export default function Session() {
-    const { classId } = useParams();
+    const { sessionId } = useParams();
     const navigate = useNavigate();
     const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
     
     const [loading, setLoading] = useState(true);
-    const [session, setSession] = useState(null);
     const [error, setError] = useState(null);
     const [exam, setExam] = useState(null);
     const [examReady, setExamReady] = useState(false);
     const [checkingExam, setCheckingExam] = useState(false);
-    const [attendanceCreated, setAttendanceCreated] = useState(false);
 
-    // 출석 생성 및 시험 상태 확인
+    // 시험 상태 확인
     useEffect(() => {
-        const initializeSession = async () => {
+        console.log('Session.jsx - sessionId from params:', sessionId);
+        
+        const initializeExam = async () => {
             try {
                 setLoading(true);
                 setError(null);
                 
-                // 1. 현재 세션 정보 조회
-                const sessionData = await fetchCurrentSession(classId);
-                if (!sessionData || !sessionData.sessionId) {
-                    setError("현재 진행 중인 세션이 없습니다.");
+                // sessionId가 없으면 에러 처리
+                if (!sessionId) {
+                    setError("세션 ID가 없습니다.");
                     return;
                 }
-                setSession(sessionData);
                 
-                // 2. 출석 생성 (아직 생성되지 않은 경우)
-                if (!attendanceCreated) {
-                    try {
-                        const attendanceData = {
-                            sessionId: sessionData.sessionId,
-                            studentId: studentId,
-                            status: 'PRESENT',
-                            note: ''
-                        };
-                        await createAttendance(attendanceData);
-                        console.log('출석이 기록되었습니다:', attendanceData);
-                        setAttendanceCreated(true);
-                    } catch (attendanceError) {
-                        console.error('출석 기록 실패:', attendanceError);
-                        // 출석 실패해도 계속 진행
-                    }
-                }
-                
-                // 3. 시험 상태 확인
-                await checkExamStatus(sessionData.sessionId);
+                // 시험 상태 확인
+                await checkExamStatus(sessionId);
                 
             } catch (e) {
-                setError("세션 정보를 불러오지 못했습니다.");
+                console.error('Session.jsx - Error:', e);
+                setError("시험 정보를 불러오지 못했습니다.");
             } finally {
                 setLoading(false);
             }
         };
         
-        initializeSession();
-    }, [classId, attendanceCreated]);
+        initializeExam();
+    }, [sessionId]);
 
     // 시험 상태 확인 함수
     const checkExamStatus = async (sessionId) => {
+        console.log('checkExamStatus called with sessionId:', sessionId);
         try {
             setCheckingExam(true);
             
@@ -150,7 +132,7 @@ export default function Session() {
                 <div className="container">
                     <div className="card">
                         <div style={{ textAlign: 'center', padding: '40px' }}>
-                            <div style={{ color: 'var(--muted)' }}>세션 정보를 불러오는 중...</div>
+                            <div style={{ color: 'var(--muted)' }}>시험 정보를 불러오는 중...</div>
                         </div>
                     </div>
                 </div>

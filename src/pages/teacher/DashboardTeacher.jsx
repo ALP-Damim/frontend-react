@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Header, AlarmStatusIndicator } from "../../components/common";
-import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime, createAttendance, fetchCurrentSession, isClassEntryAvailable, findNearestFutureSession, fetchExamBySessionId } from "../../utils/api";
+import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime, findNearestFutureSession, fetchExamBySessionId } from "../../utils/api";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
 import { useUserStomp } from "../../hooks/useUserStomp";
 
@@ -91,34 +91,46 @@ export default function DashboardTeacher() {
         return groups;
     }, [classes]);
 
-    // 강의실 입장 핸들러
-    const handleClassEntry = async (classData) => {
-        try {
-            // 현재 세션 정보 조회
-            const sessionData = await fetchCurrentSession(classData.classId);
-            
-            // sessionData가 null이거나 sessionId가 없는 경우 출석 기록하지 않음
-            if (sessionData && sessionData.sessionId && typeof sessionData.sessionId === 'number') {
-                // 강사는 항상 출석으로 기록
-                const attendanceData = {
-                    sessionId: sessionData.sessionId,
-                    studentId: teacherId, // 강사 ID를 studentId로 사용
-                    status: 'PRESENT',
-                    note: '강사 입장'
-                };
-                
-                await createAttendance(attendanceData);
-                console.log('강사 출석이 기록되었습니다:', attendanceData);
-            } else {
-                console.log('현재 진행 중인 세션이 없어 강사 출석을 기록하지 않습니다.');
+    // 줌 입장 가능 여부 확인
+    const isZoomEntryAvailable = (course) => {
+        if (!course.zoomUrl) return false;
+        
+        const now = new Date();
+        const today = now.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+        
+        // 요일 매핑 (bitToDays와 동일한 로직)
+        const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+        const mapping = [6, 0, 1, 2, 3, 4, 5]; // bit index -> real day index
+        const courseDays = [];
+        for (let i = 0; i < 7; i++) {
+            if (course.heldDay & (1 << i)) {
+                courseDays.push(dayNames[mapping[i]]);
             }
-            
-            // 강의실로 이동
-            window.location.href = `/teacher/course/${classData.classId}`;
-        } catch (error) {
-            console.error('강사 출석 기록 실패:', error);
-            // 출석 기록에 실패해도 강의실로 이동
-            window.location.href = `/teacher/course/${classData.classId}`;
+        }
+        
+        // 오늘 요일이 강의 요일에 포함되는지 확인
+        const todayName = dayNames[today];
+        if (!courseDays.includes(todayName)) return false;
+        
+        // 현재 시간이 수업 시작 10분 전부터 수업 종료까지인지 확인
+        const [startHour, startMinute] = course.startsAt.split(':').map(Number);
+        const [endHour, endMinute] = course.endsAt.split(':').map(Number);
+        
+        const startTime = new Date();
+        startTime.setHours(startHour, startMinute - 10, 0, 0); // 10분 전
+        
+        const endTime = new Date();
+        endTime.setHours(endHour, endMinute, 0, 0);
+        
+        return now >= startTime && now <= endTime;
+    };
+
+    // 줌 입장 핸들러
+    const handleZoomEntry = (zoomUrl) => {
+        if (zoomUrl) {
+            window.open(zoomUrl, '_blank', 'noopener,noreferrer');
+        } else {
+            alert('줌 링크가 없습니다.');
         }
     };
 
@@ -199,26 +211,22 @@ export default function DashboardTeacher() {
                                     <div className="course-info" style={{ marginBottom: '16px' }}>
                                         {nextClass.teacherName} · {nextClass.heldDaysString} · {formatTimeToMinutes(nextClass.startsAt)}~{formatTimeToMinutes(nextClass.endsAt)}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        {nextClass.zoomUrl && (
-                                            <a className="btn" href={nextClass.zoomUrl} target="_blank" rel="noreferrer">
-                                                Zoom 입장
-                                            </a>
-                                        )}
-                                        <button 
-                                            className="btn btn-outline"
-                                            onClick={() => handleClassEntry(nextClass)}
-                                        >
-                                            {nextClass.isCurrent ? '강의실 참여' : '강의실 입장'}
-                                        </button>
-                                                                                 <button 
+                                                                         <div style={{ display: 'flex', gap: '8px' }}>
+                                         <button 
+                                             className="btn"
+                                             onClick={() => handleZoomEntry(nextClass.zoomUrl)}
+                                             disabled={!isZoomEntryAvailable(nextClass)}
+                                         >
+                                             Zoom 입장
+                                         </button>
+                                         <button 
                                              className="btn" 
                                              onClick={() => handleExamCreate(nextClass)}
                                              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                                          >
                                              시험 작성
                                          </button>
-                                    </div>
+                                     </div>
                                 </div>
                             ) : (
                                 <div style={{ color: 'var(--muted)' }}>예정된 강의가 없습니다</div>
@@ -241,23 +249,18 @@ export default function DashboardTeacher() {
                                             <div className="course-info" style={{ marginBottom: '16px' }}>
                                                 {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}
                                             </div>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                {isClassEntryAvailable(course) ? (
-                                                    <button 
-                                                        className="btn"
-                                                        onClick={() => handleClassEntry(course)}
-                                                    >
-                                                        강의실 입장
-                                                    </button>
-                                                ) : (
-                                                    <button className="btn" disabled>
-                                                        강의실 입장
-                                                    </button>
-                                                )}
-                                                <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
-                                                    관리
-                                                </Link>
-                                            </div>
+                                                                                         <div style={{ display: 'flex', gap: '8px' }}>
+                                                 <button 
+                                                     className="btn"
+                                                     onClick={() => handleZoomEntry(course.zoomUrl)}
+                                                     disabled={!isZoomEntryAvailable(course)}
+                                                 >
+                                                     Zoom 입장
+                                                 </button>
+                                                 <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
+                                                     관리
+                                                 </Link>
+                                             </div>
                                         </div>
                                     )) : (
                                         <div style={{ color: 'var(--muted)' }}>진행 중인 강의가 없습니다</div>

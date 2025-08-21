@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import ClassDetail from "../common/ClassDetail";
-import { fetchClassAttendance } from "../../utils/api";
+import { fetchClassAttendance, fetchExamBySessionId, fetchClassSessions } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
 
 // 학생용 네비게이션 링크
@@ -15,6 +15,7 @@ export default function StudentClassDetail() {
     // 실제 로그인 연동 시 교체
     const studentId = 21;
     const { classId } = useParams();
+    const navigate = useNavigate();
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
@@ -23,6 +24,10 @@ export default function StudentClassDetail() {
     const [attendanceBySession, setAttendanceBySession] = useState({});
     const [attendanceLoading, setAttendanceLoading] = useState(true);
     const [attendanceError, setAttendanceError] = useState(null);
+    
+    // 해당 강좌의 세션별 시험 정보 맵 { [sessionId]: exam }
+    const [examBySession, setExamBySession] = useState({});
+    const [examLoading, setExamLoading] = useState(true);
     
     useEffect(() => {
         let isMounted = true;
@@ -55,8 +60,51 @@ export default function StudentClassDetail() {
         return () => { isMounted = false; };
     }, [classId, studentId]);
 
+    // 세션별 시험 정보 조회
+    useEffect(() => {
+        let isMounted = true;
+        const loadSessionExams = async () => {
+            try {
+                setExamLoading(true);
+                
+                // ClassDetail에서 세션 목록을 받아와서 각 세션의 시험 정보를 조회
+                const sessionsData = await fetchClassSessions(parseInt(classId));
+                const sessions = Array.isArray(sessionsData) ? sessionsData : [];
+                
+                const examMap = {};
+                const examPromises = sessions.map(async (session) => {
+                    try {
+                        const exam = await fetchExamBySessionId(session.sessionId);
+                        if (exam) {
+                            examMap[session.sessionId] = exam;
+                        }
+                    } catch (error) {
+                        console.error(`세션 ${session.sessionId} 시험 조회 실패:`, error);
+                    }
+                });
+                
+                await Promise.all(examPromises);
+                
+                if (isMounted) {
+                    setExamBySession(examMap);
+                }
+            } catch (e) {
+                console.error('세션별 시험 정보 조회 실패:', e);
+            } finally {
+                if (isMounted) setExamLoading(false);
+            }
+        };
+        
+        if (classId) {
+            loadSessionExams();
+        }
+        return () => { isMounted = false; };
+    }, [classId]);
+
     const renderSessionActions = (session) => {
         const status = attendanceBySession[session.sessionId];
+        const exam = examBySession[session.sessionId];
+        
         const labelMap = {
             PRESENT: '출석',
             ABSENT: '결석',
@@ -86,6 +134,18 @@ export default function StudentClassDetail() {
                 const on = new Date(session.onDate);
                 const now = new Date();
                 return on.getTime() > now.getTime();
+            } catch (_) {
+                return false;
+            }
+        })();
+
+        // 과거 세션 여부 판단
+        const isPast = (() => {
+            try {
+                if (!session?.onDate) return false;
+                const on = new Date(session.onDate);
+                const now = new Date();
+                return on.getTime() < now.getTime();
             } catch (_) {
                 return false;
             }
@@ -121,12 +181,32 @@ export default function StudentClassDetail() {
         } else {
             badge = makeBadge('확인 불가', colorMap.UNKNOWN);
         }
+
+        // 과거 세션이고 시험이 있는 경우에만 시험 결과 확인 버튼 표시
+        const showExamResultButton = isPast && exam;
+        
+        // 시험 결과 확인 핸들러
+        const handleExamResult = () => {
+            if (exam && exam.id) {
+                navigate(`/student/result/${exam.id}`);
+            }
+        };
+        
         return (
             <>
+                {/* 시험 버튼을 먼저 표시 */}
+                {showExamResultButton && (
+                    <button 
+                        className="btn btn-outline" 
+                        style={{ fontSize: '12px' }}
+                        onClick={handleExamResult}
+                    >
+                        시험 결과 확인
+                    </button>
+                )}
+                
+                {/* 출석 배지를 나중에 표시 */}
                 {badge}
-                <button className="btn btn-outline" style={{ fontSize: '12px' }}>
-                    시험 보기
-                </button>
             </>
         );
     };
@@ -139,7 +219,7 @@ export default function StudentClassDetail() {
             notifications={[]}
             renderSessionActions={renderSessionActions}
             onLogout={handleLogout}
-            showStompStatus={true}
+            showStompStatus={false}
         />
     );
 }
