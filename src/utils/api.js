@@ -335,7 +335,7 @@ export const updateUserProfile = async (userId, profileData) => {
     });
 };
 
-// 강좌별 세션 목록 조회 API
+// 강좌별 세션 목록 조회 API (기존 apiCall 사용)
 export const fetchClassSessions = async (classId) => {
     return apiCall(`/sessions/classes/${classId}`);
 };
@@ -442,32 +442,58 @@ export const isClassEntryAvailable = (classData) => {
 // 현재 진행 중인 세션 ID 조회
 export const fetchCurrentSession = async (classId) => {
     try {
-        const response = await fetch(`${API_BASE_URL}/sessions/classes/${classId}/current`);
+        const response = await fetch(`${API_BASE_URL}/sessions/classes/${classId}`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        return await response.json();
+        const data = await response.json();
+        // sessionId가 있는지 확인
+        if (!data || !data.sessionId) {
+            console.log('현재 진행 중인 세션이 없습니다.');
+            return null;
+        }
+        return data;
     } catch (error) {
         console.error('현재 세션 조회 실패:', error);
         return null;
     }
 };
 
-// 시험 정보 조회 API
-export const fetchExamBySessionId = async (sessionId) => {
+
+
+// 가장 가까운 미래 세션 찾기
+export const findNearestFutureSession = async (classId) => {
     try {
-        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams?sessionId=${sessionId}`);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        const sessions = await fetchClassSessions(classId);
+        if (!sessions.length) {
+            return null;
         }
-        const exams = await response.json();
-        // sessionId에 해당하는 시험 중 첫 번째 것을 반환
-        return Array.isArray(exams) && exams.length > 0 ? exams[0] : null;
+
+        const now = new Date();
+        let nearestSession = null;
+        let minTimeDiff = Infinity;
+
+        for (const session of sessions) {
+            const sessionDate = new Date(session.onDate);
+            
+            // 미래 세션만 고려 (현재 시간보다 이후)
+            if (sessionDate > now) {
+                const timeDiff = sessionDate.getTime() - now.getTime();
+                if (timeDiff < minTimeDiff) {
+                    minTimeDiff = timeDiff;
+                    nearestSession = session;
+                }
+            }
+        }
+
+        return nearestSession;
     } catch (error) {
-        console.error('시험 정보 조회 실패:', error);
+        console.error('가장 가까운 미래 세션 찾기 실패:', error);
         return null;
     }
 };
+
+
 
 // 출석 생성 API
 export const createAttendance = async (attendanceData) => {
@@ -487,6 +513,59 @@ export const createAttendance = async (attendanceData) => {
         return await response.json();
     } catch (error) {
         console.error('출석 생성 실패:', error);
+        throw error;
+    }
+};
+
+// 시험 정보 조회 API (GET 방식)
+export const fetchExamBySessionId = async (sessionId) => {
+    try {
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams?sessionId=${sessionId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const exams = await response.json();
+        // sessionId에 해당하는 시험 중 첫 번째 것을 반환
+        return Array.isArray(exams) && exams.length > 0 ? exams[0] : null;
+    } catch (error) {
+        console.error('시험 정보 조회 실패:', error);
+        return null;
+    }
+};
+
+// 시험 문제 목록 조회 API
+export const fetchQuestionsByExamId = async (examId) => {
+    try {
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/questions?examId=${examId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const questions = await response.json();
+        return Array.isArray(questions) ? questions : [];
+    } catch (error) {
+        console.error('시험 문제 조회 실패:', error);
+        return [];
+    }
+};
+
+// 시험 제출 데이터 생성 API
+export const createSubmission = async (submissionData) => {
+    try {
+        const response = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(submissionData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('시험 제출 데이터 생성 실패:', error);
         throw error;
     }
 };

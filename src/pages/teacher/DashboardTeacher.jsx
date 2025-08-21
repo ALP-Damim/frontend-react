@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Header, AlarmStatusIndicator } from "../../components/common";
-import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime, createAttendance, fetchCurrentSession } from "../../utils/api";
+import { fetchAllClasses, formatTimeToMinutes, calculateNextClassTime, createAttendance, fetchCurrentSession, isClassEntryAvailable, findNearestFutureSession, fetchExamBySessionId } from "../../utils/api";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
 import { useUserStomp } from "../../hooks/useUserStomp";
 
@@ -97,7 +97,8 @@ export default function DashboardTeacher() {
             // 현재 세션 정보 조회
             const sessionData = await fetchCurrentSession(classData.classId);
             
-            if (sessionData && sessionData.sessionId) {
+            // sessionData가 null이거나 sessionId가 없는 경우 출석 기록하지 않음
+            if (sessionData && sessionData.sessionId && typeof sessionData.sessionId === 'number') {
                 // 강사는 항상 출석으로 기록
                 const attendanceData = {
                     sessionId: sessionData.sessionId,
@@ -108,6 +109,8 @@ export default function DashboardTeacher() {
                 
                 await createAttendance(attendanceData);
                 console.log('강사 출석이 기록되었습니다:', attendanceData);
+            } else {
+                console.log('현재 진행 중인 세션이 없어 강사 출석을 기록하지 않습니다.');
             }
             
             // 강의실로 이동
@@ -116,6 +119,41 @@ export default function DashboardTeacher() {
             console.error('강사 출석 기록 실패:', error);
             // 출석 기록에 실패해도 강의실로 이동
             window.location.href = `/teacher/course/${classData.classId}`;
+        }
+    };
+
+    // 시험 작성 핸들러
+    const handleExamCreate = async (classData) => {
+        try {
+            console.log('시험 작성 시작:', classData.classId);
+            
+            // 1. 가장 가까운 미래 세션 찾기
+            const nearestSession = await findNearestFutureSession(classData.classId);
+            
+            if (!nearestSession) {
+                alert('미래 세션이 없습니다.');
+                return;
+            }
+            
+            console.log('가장 가까운 미래 세션:', nearestSession);
+            
+            // 2. 해당 세션의 시험 검색
+            const exam = await fetchExamBySessionId(nearestSession.sessionId);
+            
+            console.log('세션 시험 검색 결과:', exam);
+            
+            // 3. 시험 존재 여부에 따라 다른 페이지로 이동
+            if (exam) {
+                // 시험이 존재하면 편집 페이지로 이동
+                window.location.href = `/teacher/exam/edit/${exam.id}?classId=${classData.classId}&sessionId=${nearestSession.sessionId}`;
+            } else {
+                // 시험이 없으면 생성 페이지로 이동
+                window.location.href = `/teacher/exam/create/${classData.classId}?sessionId=${nearestSession.sessionId}`;
+            }
+            
+        } catch (error) {
+            console.error('시험 작성 준비 실패:', error);
+            alert('시험 작성 준비 중 오류가 발생했습니다.');
         }
     };
 
@@ -173,6 +211,13 @@ export default function DashboardTeacher() {
                                         >
                                             {nextClass.isCurrent ? '강의실 참여' : '강의실 입장'}
                                         </button>
+                                                                                 <button 
+                                             className="btn" 
+                                             onClick={() => handleExamCreate(nextClass)}
+                                             style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                                         >
+                                             시험 작성
+                                         </button>
                                     </div>
                                 </div>
                             ) : (
@@ -197,12 +242,18 @@ export default function DashboardTeacher() {
                                                 {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}
                                             </div>
                                             <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button 
-                                                    className="btn"
-                                                    onClick={() => handleClassEntry(course)}
-                                                >
-                                                    강의실 입장
-                                                </button>
+                                                {isClassEntryAvailable(course) ? (
+                                                    <button 
+                                                        className="btn"
+                                                        onClick={() => handleClassEntry(course)}
+                                                    >
+                                                        강의실 입장
+                                                    </button>
+                                                ) : (
+                                                    <button className="btn" disabled>
+                                                        강의실 입장
+                                                    </button>
+                                                )}
                                                 <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
                                                     관리
                                                 </Link>

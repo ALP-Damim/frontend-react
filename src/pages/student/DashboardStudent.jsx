@@ -101,7 +101,8 @@ export default function DashboardStudent() {
             // 현재 세션 정보 조회
             const sessionData = await fetchCurrentSession(classData.classId);
             
-            if (sessionData && sessionData.sessionId) {
+            // sessionData가 null이거나 sessionId가 없는 경우 출석 기록하지 않음
+            if (sessionData && sessionData.sessionId && typeof sessionData.sessionId === 'number') {
                 // 출석 상태 결정 (현재 시간과 강의 시작 시간 비교)
                 const now = new Date();
                 const [startHour, startMin] = classData.startsAt.split(':').map(Number);
@@ -130,6 +131,8 @@ export default function DashboardStudent() {
                 
                 await createAttendance(attendanceData);
                 console.log('출석이 기록되었습니다:', attendanceData);
+            } else {
+                console.log('현재 진행 중인 세션이 없어 출석을 기록하지 않습니다.');
             }
             
             // 강의실로 이동
@@ -184,7 +187,7 @@ export default function DashboardStudent() {
                                                 {c.teacherName} · {c.heldDaysString} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}
                                             </div>
                                             <div style={{ marginTop: '12px', display: 'flex', gap: 8 }}>
-                                                {index === 0 && isClassEntryAvailable(c) ? (
+                                                {isClassEntryAvailable(c) ? (
                                                     <button 
                                                         className="btn" 
                                                         onClick={() => handleClassEntry(c)}

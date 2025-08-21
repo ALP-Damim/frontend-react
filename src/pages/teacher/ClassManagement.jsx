@@ -1,5 +1,7 @@
 import ClassDetail from "../common/ClassDetail";
 import { useUserStomp } from "../../hooks/useUserStomp";
+import { useParams } from "react-router-dom";
+import { findNearestFutureSession, fetchExamBySessionId } from "../../utils/api";
 
 // 강사용 알림 데이터
 const notifications = [
@@ -17,19 +19,58 @@ const teacherNavigationLinks = [
 ];
 
 export default function ClassManagement() {
+    const { classId } = useParams();
     // 실제 로그인 연동 시 교체
     const teacherId = 1;
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(teacherId);
 
+    // 시험 작성 핸들러
+    const handleExamCreate = async (session) => {
+        try {
+            console.log('시험 작성 시작:', classId, '세션:', session.sessionId);
+            
+            // 해당 세션의 시험 검색
+            const exam = await fetchExamBySessionId(session.sessionId);
+            
+            console.log('세션 시험 검색 결과:', exam);
+            
+            // 시험 존재 여부에 따라 다른 페이지로 이동
+            if (exam) {
+                // 시험이 존재하면 편집 페이지로 이동
+                window.location.href = `/teacher/exam/edit/${exam.id}?classId=${classId}&sessionId=${session.sessionId}`;
+            } else {
+                // 시험이 없으면 생성 페이지로 이동
+                window.location.href = `/teacher/exam/create/${classId}?sessionId=${session.sessionId}`;
+            }
+            
+        } catch (error) {
+            console.error('시험 작성 준비 실패:', error);
+            alert('시험 작성 준비 중 오류가 발생했습니다.');
+        }
+    };
+
     // 강사용 액션 버튼들
     const renderTeacherActions = (session) => {
+        const now = new Date();
+        const sessionStart = new Date(session.startTime);
+        const sessionEnd = new Date(session.endTime);
+        const isCurrent = now >= sessionStart && now <= sessionEnd;
+        const isFuture = now < sessionStart;
+        const isPast = now > sessionEnd;
+
         return (
             <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn btn-outline" style={{ fontSize: '12px' }}>
-                    시험 작성
-                </button>
+                {(isCurrent || isFuture) && (
+                    <button 
+                        className="btn" 
+                        style={{ fontSize: '12px', backgroundColor: 'var(--accent)', color: 'white' }}
+                        onClick={() => handleExamCreate(session)}
+                    >
+                        시험 작성
+                    </button>
+                )}
                 <button className="btn btn-outline" style={{ fontSize: '12px' }}>
                     통계 보기
                 </button>

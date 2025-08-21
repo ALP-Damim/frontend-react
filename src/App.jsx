@@ -1,9 +1,12 @@
 import { Routes, Route, Link, NavLink } from "react-router-dom";
 import { DashboardStudent, Exam, Result, StudentStep, StudentMyPage, Session } from "./pages/student";
+import ExamQuestion from "./pages/student/ExamQuestion.jsx";
 import MyCourses from "./pages/student/MyCourses.jsx";
 import CourseApplication from "./pages/student/CourseApplication.jsx";
 import StudentClassDetail from "./pages/student/StudentClassDetail.jsx";
 import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } from "./pages/teacher";
+import ExamCreate from "./pages/teacher/ExamCreate.jsx";
+import ExamEdit from "./pages/teacher/ExamEdit.jsx";
 import ClassManagement from "./pages/teacher/ClassManagement.jsx";
 import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog, NotificationTest } from "./pages/common";
@@ -47,9 +50,12 @@ export default function App() {
                 <Route path="/student/courses" element={<MyCourses />} />
                 <Route path="/student/class/:classId" element={<StudentClassDetail />} />
                 <Route path="/student/session/:classId" element={<Session />} />
+                <Route path="/student/exam/:examId/question/:questionNumber" element={<ExamQuestion />} />
                 <Route path="/course-application" element={<CourseApplication />} />
-                <Route path="/teacher" element={<DashboardTeacher />} />
-                <Route path="/teacher/class/:classId" element={<ClassManagement />} />
+                                 <Route path="/teacher" element={<DashboardTeacher />} />
+                 <Route path="/teacher/class/:classId" element={<ClassManagement />} />
+                 <Route path="/teacher/exam/create/:classId" element={<ExamCreate />} />
+                 <Route path="/teacher/exam/edit/:examId" element={<ExamEdit />} />
                 <Route path="/course-registration" element={<CourseRegistration />} />
                 <Route path="/teacher/mypage" element={<TeacherMyPage />} />
                 <Route path="/admin" element={<DashboardAdmin />} />
