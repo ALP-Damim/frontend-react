@@ -1,15 +1,32 @@
-// API 기본 설정 (Vite 환경 변수 사용)
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '/api';
+// API 기본 설정 (개발: Vite 프록시 /api 사용, 운영: 절대 URL)
+const API_BASE_URL = (
+    typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV
+)
+    ? '/api'
+    : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '/api');
 
 // 공통 API 호출 함수
 const apiCall = async (endpoint, options = {}) => {
-    const url = `${API_BASE_URL}${endpoint}`;
-    
+    const apimKey = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_KEY) || '';
+    const apimParam = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_QUERY_NAME) || 'subscription-key';
+
+    const rawUrl = `${API_BASE_URL}${endpoint}`;
+    let url = rawUrl;
+    try {
+        const u = new URL(rawUrl, (typeof window !== 'undefined' ? window.location.origin : 'http://localhost'));
+        if (apimKey && !u.searchParams.has(apimParam)) {
+            u.searchParams.set(apimParam, apimKey);
+        }
+        url = u.toString();
+    } catch {
+        // URL 구성 실패 시 원본 사용
+        url = rawUrl;
+    }
+
     const defaultOptions = {
         headers: {
             'Content-Type': 'application/json',
-            // 인증 토큰이 있다면 여기에 추가
-            // 'Authorization': `Bearer ${getToken()}`,
+            ...(apimKey ? { 'Ocp-Apim-Subscription-Key': apimKey } : {}),
         },
         ...options,
     };
@@ -30,17 +47,17 @@ const apiCall = async (endpoint, options = {}) => {
 
 // 학생 성적 조회 API
 export const fetchStudentGrades = async (studentId) => {
-    return apiCall(`/student/${studentId}/grades`);
+    return apiCall(`/${studentId}/grades`);
 };
 
 // 학생 프로필 조회 API
 export const fetchStudentProfile = async (studentId) => {
-    return apiCall(`/student/${studentId}/profile`);
+    return apiCall(`/${studentId}/profile`);
 };
 
 // 학생 프로필 업데이트 API
 export const updateStudentProfile = async (studentId, profileData) => {
-    return apiCall(`/student/${studentId}/profile`, {
+    return apiCall(`/${studentId}/profile`, {
         method: 'PUT',
         body: JSON.stringify(profileData),
     });
@@ -48,22 +65,22 @@ export const updateStudentProfile = async (studentId, profileData) => {
 
 // 출석률 조회 API
 export const fetchAttendanceRate = async (studentId, courseId) => {
-    return apiCall(`/student/${studentId}/courses/${courseId}/attendance`);
+    return apiCall(`/${studentId}/courses/${courseId}/attendance`);
 };
 
 // 과제 성적 조회 API
 export const fetchAssignmentGrades = async (studentId, courseId) => {
-    return apiCall(`/student/${studentId}/courses/${courseId}/assignments`);
+    return apiCall(`/${studentId}/courses/${courseId}/assignments`);
 };
 
 // 시험 성적 조회 API
 export const fetchExamGrades = async (studentId, courseId) => {
-    return apiCall(`/student/${studentId}/courses/${courseId}/exams`);
+    return apiCall(`/${studentId}/courses/${courseId}/exams`);
 };
 
 // 전체 성적 요약 API
 export const fetchGradeSummary = async (studentId) => {
-    return apiCall(`/student/${studentId}/grades/summary`);
+    return apiCall(`/${studentId}/grades/summary`);
 };
 
 // 수강 신청 API
@@ -298,12 +315,12 @@ export const fetchAttendance = async (studentId, sessionId) => {
     return apiCall(`/attendance/session/${studentId}/${sessionId}`);
 };
 
-// 알림 관련 API (localhost:8080)
-const NOTIFICATION_API_BASE = 'http://localhost:8080';
+// 알림 관련 API 베이스 (환경변수)
+const NOTIFICATION_API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_NOTIFICATION_API_URL) || 'http://localhost:8080/notifications-service-http';
 
 // 알림 전송
 export const sendNotification = async (notificationData) => {
-    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/send`, {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/notifications/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(notificationData)
@@ -318,7 +335,7 @@ export const sendNotification = async (notificationData) => {
 
 // 사용자별 알림 목록 조회
 export const fetchUserNotifications = async (userId) => {
-    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}`);
+    const response = await fetch(`${NOTIFICATION_API_BASE}/notifications/user/${userId}`);
     
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -329,7 +346,7 @@ export const fetchUserNotifications = async (userId) => {
 
 // 읽지 않은 알림 개수 조회
 export const fetchUnreadNotificationCount = async (userId) => {
-    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}/unread-count`);
+    const response = await fetch(`${NOTIFICATION_API_BASE}/notifications/user/${userId}/unread-count`);
     
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -340,7 +357,7 @@ export const fetchUnreadNotificationCount = async (userId) => {
 
 // 개별 알림 읽음 처리
 export const markNotificationAsRead = async (notificationId) => {
-    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/${notificationId}/read`, {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/notifications/${notificationId}/read`, {
         method: 'PUT'
     });
     
@@ -353,7 +370,7 @@ export const markNotificationAsRead = async (notificationId) => {
 
 // 모든 알림 읽음 처리
 export const markAllNotificationsAsRead = async (userId) => {
-    const response = await fetch(`${NOTIFICATION_API_BASE}/api/notifications/user/${userId}/read-all`, {
+    const response = await fetch(`${NOTIFICATION_API_BASE}/notifications/user/${userId}/read-all`, {
         method: 'PUT'
     });
     

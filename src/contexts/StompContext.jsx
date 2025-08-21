@@ -54,8 +54,16 @@ export const StompProvider = ({ children }) => {
         try {
             addLog(`STOMP 연결 시도... (사용자: ${userId})`, 'info');
             
+            const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+            const devWsUrl = (() => {
+                const base = '/ws';
+                const key = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_KEY) || '';
+                const param = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_QUERY_NAME) || 'subscription-key';
+                if (!key) return base;
+                return `${base}?${encodeURIComponent(param)}=${encodeURIComponent(key)}`;
+            })();
             const client = new Client({
-                brokerURL: 'ws://localhost:8080/ws',
+                brokerURL: isDev ? devWsUrl : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws'),
                 connectHeaders: {},
                 debug: function (str) {
                     addLog(`STOMP Debug: ${str}`, 'info');

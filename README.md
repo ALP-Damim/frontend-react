@@ -54,6 +54,28 @@ npm run dev
 npm run build
 ```
 
+## 배포
+
+### 환경변수(.env.production)
+아래 예시를 참고해 루트에 `.env.production` 파일을 생성하세요.
+
+```
+VITE_API_SERVER_URL=https://team02-apim.azure-api.net
+VITE_API_BASE_URL=https://team02-apim.azure-api.net/student
+VITE_NOTIFICATION_API_URL=https://team02-apim.azure-api.net/notifications-service-http
+VITE_WEBSOCKET_URL=wss://team02-apim.azure-api.net/ws
+VITE_APIM_SUBSCRIPTION_KEY=
+VITE_APIM_SUBSCRIPTION_QUERY_NAME=subscription-key
+```
+
+### Docker 빌드/실행
+```
+docker build -t your/image:tag .
+docker run -e API_URL=team02-apim.azure-api.net -p 8080:80 your/image:tag
+```
+
+nginx는 CSP의 connect-src에 Azure APIM 도메인을 허용하도록 설정되어 있습니다.
+
 ## API 연동
 
 ### 성적 조회 API

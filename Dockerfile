@@ -13,17 +13,15 @@ RUN npm ci
 # 소스 코드 복사
 COPY . .
 
-# 프로덕션 빌드
+# 프로덕션 빌드 (production 모드)
+ENV NODE_ENV=production
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# nginx 설정 파일 복사 (템플릿으로)
-COPY nginx.conf /etc/nginx/nginx.conf.template
-RUN apk add --no-cache bash
-COPY docker-entrypoint.sh /
-RUN chmod +x /docker-entrypoint.sh
+# nginx 설정 파일 복사 (템플릿 불필요)
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # 빌드된 파일들을 nginx의 정적 파일 디렉토리로 복사
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -31,5 +29,5 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # 포트 80 노출
 EXPOSE 80
 
-# nginx 시작 (환경변수 처리)
-CMD ["/docker-entrypoint.sh"]
+# nginx 시작
+CMD ["nginx", "-g", "daemon off;"]

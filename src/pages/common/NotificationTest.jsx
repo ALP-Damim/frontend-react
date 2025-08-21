@@ -32,8 +32,9 @@ const NotificationTest = () => {
             addLog('STOMP 연결 시도...', 'info');
             
             // STOMP 클라이언트 생성
+            const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
             const client = new Client({
-                brokerURL: 'ws://localhost:8080/ws',
+                brokerURL: isDev ? '/ws' : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws'),
                 connectHeaders: {},
                 debug: function (str) {
                     addLog(`STOMP Debug: ${str}`, 'info');
@@ -291,7 +292,7 @@ const NotificationTest = () => {
                         </span>
                         {stompClient.current && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '4px' }}>
-                                URL: ws://localhost:8080/ws
+                                URL: {(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ? '/ws' : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws')}
                             </div>
                         )}
                     </div>
