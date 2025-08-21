@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
-import { submitAnswer } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -10,26 +9,86 @@ const studentNavigationLinks = [
     { to: "/mypage", text: "마이페이지" }
 ];
 
+// 하드코딩된 시험 데이터
+const mockExam = {
+    id: "exam-001",
+    name: "React 기초 시험",
+    description: "React의 기본 개념과 사용법에 대한 시험입니다.",
+    duration: 60, // 분
+    totalPoints: 100
+};
+
+const mockQuestions = [
+    {
+        id: "q1",
+        body: "React에서 컴포넌트를 정의하는 방법 중 올바른 것은?",
+        qtype: "MCQ",
+        choices: JSON.stringify([
+            "function MyComponent() { return <div>Hello</div>; }",
+            "class MyComponent { render() { return <div>Hello</div>; } }",
+            "const MyComponent = () => <div>Hello</div>;",
+            "모든 위의 방법들이 올바르다"
+        ]),
+        points: 20,
+        correctAnswer: "모든 위의 방법들이 올바르다"
+    },
+    {
+        id: "q2",
+        body: "React에서 상태(state)를 관리하는 Hook은?",
+        qtype: "MCQ",
+        choices: JSON.stringify([
+            "useState",
+            "useEffect", 
+            "useContext",
+            "useReducer"
+        ]),
+        points: 20,
+        correctAnswer: "useState"
+    },
+    {
+        id: "q3",
+        body: "React에서 props의 특징을 설명하세요.",
+        qtype: "SHORT",
+        points: 20,
+        correctAnswer: "읽기 전용이며 부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달하는 방법"
+    },
+    {
+        id: "q4",
+        body: "React의 Virtual DOM이 실제 DOM보다 빠른 이유를 설명하세요.",
+        qtype: "ESSAY",
+        points: 25,
+        correctAnswer: "Virtual DOM은 메모리상의 가상 표현으로, 실제 DOM 조작을 최소화하여 성능을 향상시킵니다."
+    },
+    {
+        id: "q5",
+        body: "React에서 조건부 렌더링을 구현하는 방법을 예시와 함께 설명하세요.",
+        qtype: "ESSAY",
+        points: 15,
+        correctAnswer: "삼항 연산자나 && 연산자를 사용하여 조건에 따라 다른 컴포넌트를 렌더링할 수 있습니다."
+    }
+];
+
+const mockSubmission = {
+    id: "submission-001",
+    examId: "exam-001",
+    studentId: "student-001",
+    startTime: new Date().toISOString(),
+    status: "in_progress"
+};
+
 export default function ExamQuestion() {
     const { examId, questionNumber } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     
-    const [exam, setExam] = useState(location.state?.exam || null);
-    const [questions, setQuestions] = useState(location.state?.questions || []);
-    const [submission, setSubmission] = useState(location.state?.submission || null);
+    // 하드코딩된 데이터 사용
+    const [exam] = useState(mockExam);
+    const [questions] = useState(mockQuestions);
+    const [submission] = useState(mockSubmission);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(parseInt(questionNumber) - 1);
     const [answers, setAnswers] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-
-    // 상태가 없으면 이전 페이지로 이동
-    useEffect(() => {
-        if (!exam || !questions || !submission) {
-            navigate('/student');
-            return;
-        }
-    }, [exam, questions, submission, navigate]);
 
     const currentQuestion = questions[currentQuestionIndex];
     const totalQuestions = questions.length;
@@ -44,27 +103,20 @@ export default function ExamQuestion() {
         }));
     };
 
-
-
-    // 다음 문제로 이동 (현재 답안 제출 후)
+    // 다음 문제로 이동 (현재 답안 저장 후)
     const handleNextQuestion = async () => {
         if (!isLastQuestion) {
             try {
-                // 현재 답안 제출
-                if (answers[currentQuestionIndex]) {
-                    await submitAnswer(submission.id, currentQuestion.id, { 
-                        answer: answers[currentQuestionIndex]
-                    });
-                    console.log(`문제 ${currentQuestionIndex + 1} 답안 제출 완료`);
-                }
+                // 현재 답안 저장 (실제 API 호출 대신 로컬 상태만 업데이트)
+                console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, answers[currentQuestionIndex]);
                 
                 // 다음 문제로 이동
                 const nextIndex = currentQuestionIndex + 1;
                 setCurrentQuestionIndex(nextIndex);
                 navigate(`/student/exam/${examId}/question/${nextIndex + 1}`);
             } catch (error) {
-                console.error('답안 제출 실패:', error);
-                setError('답안 제출에 실패했습니다. 다시 시도해주세요.');
+                console.error('답안 저장 실패:', error);
+                setError('답안 저장에 실패했습니다. 다시 시도해주세요.');
             }
         }
     };
@@ -77,28 +129,37 @@ export default function ExamQuestion() {
 
         setLoading(true);
         try {
-            // 1. 마지막 문제 답안 제출
-            if (answers[currentQuestionIndex]) {
-                await submitAnswer(submission.id, currentQuestion.id, { 
-                    answer: answers[currentQuestionIndex]
-                });
-                console.log(`마지막 문제 답안 제출 완료`);
-            }
+            // 마지막 문제 답안 저장
+            console.log(`마지막 문제 답안 저장:`, answers[currentQuestionIndex]);
+            console.log('모든 답안 제출 완료');
 
-            // 2. 모든 답안을 서버에 제출
-            const submitPromises = Object.entries(answers).map(async ([index, answer]) => {
-                if (answer) {
-                    const questionIndex = parseInt(index);
-                    const question = questions[questionIndex];
-                    return submitAnswer(submission.id, question.id, { 
-                        answer: answer
-                    });
+            // 결과 계산
+            const results = questions.map((question, index) => {
+                const userAnswer = answers[index] || '';
+                let isCorrect = false;
+                let score = 0;
+
+                if (question.qtype === 'MCQ') {
+                    isCorrect = userAnswer === question.correctAnswer;
+                    score = isCorrect ? question.points : 0;
+                } else {
+                    // 주관식은 부분 점수 (답안이 있으면 기본 점수)
+                    score = userAnswer.trim() ? Math.floor(question.points * 0.7) : 0;
+                    isCorrect = userAnswer.trim().toLowerCase().includes(question.correctAnswer.toLowerCase());
                 }
-                return Promise.resolve();
+
+                return {
+                    questionId: question.id,
+                    userAnswer,
+                    correctAnswer: question.correctAnswer,
+                    isCorrect,
+                    score,
+                    maxScore: question.points
+                };
             });
 
-            await Promise.all(submitPromises);
-            console.log('모든 답안 제출 완료');
+            const totalScore = results.reduce((sum, result) => sum + result.score, 0);
+            const maxScore = questions.reduce((sum, question) => sum + question.points, 0);
 
             // 3. 결과 페이지로 이동
             navigate(`/student/exam/${examId}/result`, {
@@ -106,7 +167,10 @@ export default function ExamQuestion() {
                     exam,
                     submission,
                     answers,
-                    questions
+                    questions,
+                    results,
+                    totalScore,
+                    maxScore
                 }
             });
         } catch (error) {
@@ -173,33 +237,33 @@ export default function ExamQuestion() {
                             {currentQuestion.body}
                         </h3>
 
-                                                 {/* 문제 유형에 따른 답안 입력 */}
-                         {currentQuestion.qtype === 'MCQ' && (
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                 {JSON.parse(currentQuestion.choices || '[]').map((choice, index) => (
-                                     <label key={index} style={{ 
-                                         display: 'flex', 
-                                         alignItems: 'center', 
-                                         gap: '12px',
-                                         padding: '12px',
-                                         border: '1px solid var(--border)',
-                                         borderRadius: '8px',
-                                         cursor: 'pointer',
-                                         backgroundColor: answers[currentQuestionIndex] === choice ? 'var(--hover)' : 'transparent'
-                                     }}>
-                                         <input
-                                             type="radio"
-                                             name={`question-${currentQuestionIndex}`}
-                                             value={choice}
-                                             checked={answers[currentQuestionIndex] === choice}
-                                             onChange={(e) => handleAnswerChange(e.target.value)}
-                                             style={{ margin: 0 }}
-                                         />
-                                         <span>{index + 1}. {choice}</span>
-                                     </label>
-                                 ))}
-                             </div>
-                         )}
+                        {/* 문제 유형에 따른 답안 입력 */}
+                        {currentQuestion.qtype === 'MCQ' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {JSON.parse(currentQuestion.choices || '[]').map((choice, index) => (
+                                    <label key={index} style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '12px',
+                                        padding: '12px',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        backgroundColor: answers[currentQuestionIndex] === choice ? 'var(--hover)' : 'transparent'
+                                    }}>
+                                        <input
+                                            type="radio"
+                                            name={`question-${currentQuestionIndex}`}
+                                            value={choice}
+                                            checked={answers[currentQuestionIndex] === choice}
+                                            onChange={(e) => handleAnswerChange(e.target.value)}
+                                            style={{ margin: 0 }}
+                                        />
+                                        <span>{index + 1}. {choice}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
 
                         {currentQuestion.qtype === 'SHORT' && (
                             <textarea
@@ -251,74 +315,74 @@ export default function ExamQuestion() {
                         )}
                     </div>
 
-                                         {/* 네비게이션 버튼 */}
-                     <div style={{ 
-                         display: 'flex', 
-                         justifyContent: 'flex-end', 
-                         alignItems: 'center',
-                         gap: '12px'
-                     }}>
-                         {!isLastQuestion ? (
-                             <button
-                                 className="btn"
-                                 onClick={handleNextQuestion}
-                             >
-                                 다음 문제 →
-                             </button>
-                         ) : (
-                             <button
-                                 className="btn"
-                                 onClick={handleSubmitExam}
-                                 disabled={loading}
-                                 style={{ backgroundColor: 'var(--warn)', color: 'white' }}
-                             >
-                                 {loading ? '제출 중...' : '시험 제출'}
-                             </button>
-                         )}
-                     </div>
+                    {/* 네비게이션 버튼 */}
+                    <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'flex-end', 
+                        alignItems: 'center',
+                        gap: '12px'
+                    }}>
+                        {!isLastQuestion ? (
+                            <button
+                                className="btn"
+                                onClick={handleNextQuestion}
+                            >
+                                다음 문제 →
+                            </button>
+                        ) : (
+                            <button
+                                className="btn"
+                                onClick={handleSubmitExam}
+                                disabled={loading}
+                                style={{ backgroundColor: 'var(--warn)', color: 'white' }}
+                            >
+                                {loading ? '제출 중...' : '시험 제출'}
+                            </button>
+                        )}
+                    </div>
 
-                                         {/* 문제 진행 상황 표시 */}
-                     <div style={{ 
-                         marginTop: '24px', 
-                         padding: '16px', 
-                         backgroundColor: 'var(--hover)', 
-                         borderRadius: '8px'
-                     }}>
-                         <div style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--muted)' }}>
-                             문제 진행 상황
-                         </div>
-                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                             {questions.map((_, index) => (
-                                 <div
-                                     key={index}
-                                     style={{
-                                         minWidth: '40px',
-                                         height: '40px',
-                                         fontSize: '12px',
-                                         display: 'flex',
-                                         alignItems: 'center',
-                                         justifyContent: 'center',
-                                         backgroundColor: index === currentQuestionIndex 
-                                             ? 'var(--accent)' 
-                                             : index < currentQuestionIndex
-                                                 ? (answers[index] ? 'var(--success)' : 'var(--warn)')
-                                                 : 'var(--border)',
-                                         color: index === currentQuestionIndex ? 'white' : 'var(--text)',
-                                         borderRadius: '8px',
-                                         border: '1px solid var(--border)'
-                                     }}
-                                 >
-                                     {index + 1}
-                                 </div>
-                             ))}
-                         </div>
-                         <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '8px' }}>
-                             <span style={{ color: 'var(--accent)' }}>●</span> 현재 문제 | 
-                             <span style={{ color: 'var(--success)' }}>●</span> 완료 | 
-                             <span style={{ color: 'var(--warn)' }}>●</span> 미완료 | 
-                             <span style={{ color: 'var(--border)' }}>●</span> 미도달
-                         </div>
-                     </div>
+                    {/* 문제 진행 상황 표시 */}
+                    <div style={{ 
+                        marginTop: '24px', 
+                        padding: '16px', 
+                        backgroundColor: 'var(--hover)', 
+                        borderRadius: '8px'
+                    }}>
+                        <div style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--muted)' }}>
+                            문제 진행 상황
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {questions.map((_, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        minWidth: '40px',
+                                        height: '40px',
+                                        fontSize: '12px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: index === currentQuestionIndex 
+                                            ? 'var(--accent)' 
+                                            : index < currentQuestionIndex
+                                                ? (answers[index] ? 'var(--success)' : 'var(--warn)')
+                                                : 'var(--border)',
+                                        color: index === currentQuestionIndex ? 'white' : 'var(--text)',
+                                        borderRadius: '8px',
+                                        border: '1px solid var(--border)'
+                                    }}
+                                >
+                                    {index + 1}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '8px' }}>
+                            <span style={{ color: 'var(--accent)' }}>●</span> 현재 문제 | 
+                            <span style={{ color: 'var(--success)' }}>●</span> 완료 | 
+                            <span style={{ color: 'var(--warn)' }}>●</span> 미완료 | 
+                            <span style={{ color: 'var(--border)' }}>●</span> 미도달
+                        </div>
+                    </div>
 
                     {error && (
                         <div style={{ 

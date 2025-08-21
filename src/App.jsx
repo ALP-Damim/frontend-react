@@ -8,7 +8,6 @@ import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } f
 import ExamCreate from "./pages/teacher/ExamCreate.jsx";
 import ExamEdit from "./pages/teacher/ExamEdit.jsx";
 import ClassManagement from "./pages/teacher/ClassManagement.jsx";
-import { DashboardAdmin } from "./pages/admin";
 import { RAG, NotificationLog, NotificationTest } from "./pages/common";
 import { StompProvider } from "./contexts/StompContext";
 
@@ -23,9 +22,6 @@ function Nav() {
             </NavLink>
             <NavLink to="/teacher" {...{ className: link }}>
                 강사
-            </NavLink>
-            <NavLink to="/admin" {...{ className: link }}>
-                관리자
             </NavLink>
             <div style={{flex:1}} />
             <NavLink to="/rag" {...{ className: link }}>
@@ -58,11 +54,10 @@ export default function App() {
                  <Route path="/teacher/exam/edit/:examId" element={<ExamEdit />} />
                 <Route path="/course-registration" element={<CourseRegistration />} />
                 <Route path="/teacher/mypage" element={<TeacherMyPage />} />
-                <Route path="/admin" element={<DashboardAdmin />} />
                 <Route path="/exam/:examId" element={<Exam />} />
                 <Route path="/exam/:examId/step" element={<StudentStep />} />
                 <Route path="/teacher/:examId/monitor" element={<TeacherMonitor />} />
-                <Route path="/student/result/:examId" element={<Result />} />
+                <Route path="/student/exam/:examId/result" element={<Result />} />
                 <Route path="/mypage" element={<StudentMyPage />} />
                 <Route path="/rag" element={<RAG />} />
                 <Route path="/notifications" element={<NotificationLog />} />
@@ -97,9 +92,7 @@ function Home() {
                         <Link className="btn btn-outline" to="/teacher" style={{ textAlign: 'center' }}>
                             강사 대시보드
                         </Link>
-                        <Link className="btn btn-outline" to="/admin" style={{ textAlign: 'center' }}>
-                            관리자 대시보드
-                        </Link>
+
                         <Link className="btn btn-outline" to="/notification-test" style={{ textAlign: 'center' }}>
                             알람 테스트
                         </Link>

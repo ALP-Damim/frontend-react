@@ -187,9 +187,124 @@ export default function StudentClassDetail() {
         
         // 시험 결과 확인 핸들러
         const handleExamResult = () => {
-            if (exam && exam.id) {
-                navigate(`/student/result/${exam.id}`);
-            }
+            console.log('시험결과 확인 버튼 클릭됨');
+            
+            // 목업 시험 결과 데이터
+            const mockExam = {
+                id: "exam-001",
+                name: "React 기초 시험",
+                description: "React의 기본 개념과 사용법에 대한 시험입니다.",
+                duration: 60,
+                totalPoints: 100
+            };
+
+            const mockQuestions = [
+                {
+                    id: "q1",
+                    body: "React에서 컴포넌트를 정의하는 방법 중 올바른 것은?",
+                    qtype: "MCQ",
+                    choices: JSON.stringify([
+                        "function MyComponent() { return <div>Hello</div>; }",
+                        "class MyComponent { render() { return <div>Hello</div>; } }",
+                        "const MyComponent = () => <div>Hello</div>;",
+                        "모든 위의 방법들이 올바르다"
+                    ]),
+                    points: 20,
+                    correctAnswer: "모든 위의 방법들이 올바르다"
+                },
+                {
+                    id: "q2",
+                    body: "React에서 상태(state)를 관리하는 Hook은?",
+                    qtype: "MCQ",
+                    choices: JSON.stringify([
+                        "useState",
+                        "useEffect", 
+                        "useContext",
+                        "useReducer"
+                    ]),
+                    points: 20,
+                    correctAnswer: "useState"
+                },
+                {
+                    id: "q3",
+                    body: "React에서 props의 특징을 설명하세요.",
+                    qtype: "SHORT",
+                    points: 20,
+                    correctAnswer: "읽기 전용이며 부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달하는 방법"
+                },
+                {
+                    id: "q4",
+                    body: "React의 Virtual DOM이 실제 DOM보다 빠른 이유를 설명하세요.",
+                    qtype: "ESSAY",
+                    points: 25,
+                    correctAnswer: "Virtual DOM은 메모리상의 가상 표현으로, 실제 DOM 조작을 최소화하여 성능을 향상시킵니다."
+                },
+                {
+                    id: "q5",
+                    body: "React에서 조건부 렌더링을 구현하는 방법을 예시와 함께 설명하세요.",
+                    qtype: "ESSAY",
+                    points: 15,
+                    correctAnswer: "삼항 연산자나 && 연산자를 사용하여 조건에 따라 다른 컴포넌트를 렌더링할 수 있습니다."
+                }
+            ];
+
+            const mockSubmission = {
+                id: "submission-001",
+                examId: "exam-001",
+                studentId: studentId,
+                startTime: new Date().toISOString(),
+                status: "completed"
+            };
+
+            // 목업 답안 (실제로는 서버에서 가져와야 함)
+            const mockAnswers = {
+                0: "모든 위의 방법들이 올바르다",
+                1: "useState",
+                2: "읽기 전용이며 부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달하는 방법",
+                3: "Virtual DOM은 메모리상의 가상 표현으로, 실제 DOM 조작을 최소화하여 성능을 향상시킵니다.",
+                4: "삼항 연산자나 && 연산자를 사용하여 조건에 따라 다른 컴포넌트를 렌더링할 수 있습니다."
+            };
+
+            // 결과 계산
+            const results = mockQuestions.map((question, index) => {
+                const userAnswer = mockAnswers[index] || '';
+                let isCorrect = false;
+                let score = 0;
+
+                if (question.qtype === 'MCQ') {
+                    isCorrect = userAnswer === question.correctAnswer;
+                    score = isCorrect ? question.points : 0;
+                } else {
+                    // 주관식은 부분 점수 (답안이 있으면 기본 점수)
+                    score = userAnswer.trim() ? Math.floor(question.points * 0.9) : 0;
+                    isCorrect = userAnswer.trim().toLowerCase().includes(question.correctAnswer.toLowerCase());
+                }
+
+                return {
+                    questionId: question.id,
+                    userAnswer,
+                    correctAnswer: question.correctAnswer,
+                    isCorrect,
+                    score,
+                    maxScore: question.points
+                };
+            });
+
+            const totalScore = results.reduce((sum, result) => sum + result.score, 0);
+            const maxScore = mockQuestions.reduce((sum, question) => sum + question.points, 0);
+
+            // 결과 페이지로 이동
+            navigate(`/student/exam/${mockExam.id}/result`, {
+                state: {
+                    exam: mockExam,
+                    submission: mockSubmission,
+                    answers: mockAnswers,
+                    questions: mockQuestions,
+                    results,
+                    totalScore,
+                    maxScore
+                }
+            });
         };
         
         return (

@@ -251,6 +251,35 @@ export default function DashboardStudent() {
                             )}
                         </div>
 
+                        {/* 시험 시작 */}
+                        <div className="card">
+                            <h3 className="section-title">시험</h3>
+                            <div style={{ 
+                                padding: '20px', 
+                                backgroundColor: 'var(--hover)', 
+                                borderRadius: '8px',
+                                textAlign: 'center'
+                            }}>
+                                <h4 style={{ marginBottom: '15px', color: 'var(--accent)' }}>React 기초 시험</h4>
+                                <p style={{ marginBottom: '20px', color: 'var(--muted)' }}>
+                                    React의 기본 개념과 사용법에 대한 시험입니다.<br/>
+                                    총 5문제, 100점 만점, 60분 제한시간
+                                </p>
+                                <button 
+                                    className="btn" 
+                                    style={{ 
+                                        fontSize: '1.1rem', 
+                                        padding: '12px 24px',
+                                        backgroundColor: 'var(--accent)',
+                                        color: 'white'
+                                    }}
+                                    onClick={() => navigate('/student/session/test-session')}
+                                >
+                                    시험 시작하기
+                                </button>
+                            </div>
+                        </div>
+
                         {/* 추천 강의 */}
                         <div className="card">
                             <h3 className="section-title">추천 강의</h3>
