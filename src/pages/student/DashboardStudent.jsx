@@ -273,7 +273,74 @@ export default function DashboardStudent() {
                                         backgroundColor: 'var(--accent)',
                                         color: 'white'
                                     }}
-                                    onClick={() => navigate('/student/session/test-session')}
+                                    onClick={() => navigate('/student/exam/exam-001/question/1', {
+                                        state: {
+                                            exam: {
+                                                id: "exam-001",
+                                                name: "React 기초 시험",
+                                                description: "React의 기본 개념과 사용법에 대한 시험입니다.",
+                                                duration: 60,
+                                                totalPoints: 100
+                                            },
+                                            questions: [
+                                                {
+                                                    id: "q1",
+                                                    body: "React에서 컴포넌트를 정의하는 방법 중 올바른 것은?",
+                                                    qtype: "MCQ",
+                                                    choices: JSON.stringify([
+                                                        "function MyComponent() { return <div>Hello</div>; }",
+                                                        "class MyComponent { render() { return <div>Hello</div>; } }",
+                                                        "const MyComponent = () => <div>Hello</div>;",
+                                                        "모든 위의 방법들이 올바르다"
+                                                    ]),
+                                                    points: 20,
+                                                    correctAnswer: "모든 위의 방법들이 올바르다"
+                                                },
+                                                {
+                                                    id: "q2",
+                                                    body: "React에서 상태(state)를 관리하는 Hook은?",
+                                                    qtype: "MCQ",
+                                                    choices: JSON.stringify([
+                                                        "useState",
+                                                        "useEffect", 
+                                                        "useContext",
+                                                        "useReducer"
+                                                    ]),
+                                                    points: 20,
+                                                    correctAnswer: "useState"
+                                                },
+                                                {
+                                                    id: "q3",
+                                                    body: "React에서 props의 특징을 설명하세요.",
+                                                    qtype: "SHORT",
+                                                    points: 20,
+                                                    correctAnswer: "읽기 전용이며 부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달하는 방법"
+                                                },
+                                                {
+                                                    id: "q4",
+                                                    body: "React의 Virtual DOM이 실제 DOM보다 빠른 이유를 설명하세요.",
+                                                    qtype: "ESSAY",
+                                                    points: 25,
+                                                    correctAnswer: "Virtual DOM은 메모리상의 가상 표현으로, 실제 DOM 조작을 최소화하여 성능을 향상시킵니다."
+                                                },
+                                                {
+                                                    id: "q5",
+                                                    body: "React에서 조건부 렌더링을 구현하는 방법을 예시와 함께 설명하세요.",
+                                                    qtype: "ESSAY",
+                                                    points: 15,
+                                                    correctAnswer: "삼항 연산자나 && 연산자를 사용하여 조건에 따라 다른 컴포넌트를 렌더링할 수 있습니다."
+                                                }
+                                            ],
+                                            submission: {
+                                                id: "submission-001",
+                                                examId: "exam-001",
+                                                studentId: 21,
+                                                startTime: new Date().toISOString(),
+                                                status: "in_progress"
+                                            },
+                                            currentQuestionIndex: 0
+                                        }
+                                    })}
                                 >
                                     시험 시작하기
                                 </button>
