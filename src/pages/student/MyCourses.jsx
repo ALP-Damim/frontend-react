@@ -14,7 +14,7 @@ const studentNavigationLinks = [
 
 export default function MyCourses(){
     // 실제 로그인 연동 시 교체
-    const studentId = 26;
+    const studentId = 27;
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);

@@ -35,7 +35,7 @@ export default function Result(){
     const [error, setError] = useState("");
     
     // STOMP 연결 관리
-    const studentId = 26; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
     const { handleLogout } = useUserStomp(studentId);
 
     // 시험 결과 로드

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/common';
 import { useStomp } from '../../contexts/StompContext';
+import { fetchExamBySessionId, createSubmission, fetchQuestionsByExamId } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -73,7 +74,7 @@ const mockQuestions = [
 export default function Session() {
     const { sessionId } = useParams();
     const navigate = useNavigate();
-    const studentId = 26; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
     const { isConnected, sendMessage, subscribeToTopic } = useStomp();
@@ -101,9 +102,21 @@ export default function Session() {
                     return;
                 }
                 
-                // 하드코딩된 시험 데이터 사용 (초기에는 준비되지 않은 상태)
-                setExam(mockExam);
-                setExamReady(mockExam.isReady);
+                // API를 통해 실제 시험 데이터 조회
+                const examData = await fetchExamBySessionId(sessionId);
+                console.log('API로 조회한 시험 데이터:', examData);
+                
+                if (examData) {
+                    setExam(examData);
+                    setExamReady(examData.isReady);
+                    console.log('시험 준비 상태:', examData.isReady);
+                } else {
+                    // 시험이 아직 생성되지 않은 경우
+                    setExam(null);
+                    setExamReady(false);
+                    console.log('시험이 아직 생성되지 않음');
+                }
+                
                 setLoading(false);
                 
             } catch (e) {
@@ -165,35 +178,50 @@ export default function Session() {
         
         // sessionId에 대한 토픽 구독
         const sessionTopic = `/topic/session/${sessionId}`;
-        const subscription = subscribeToTopic(sessionTopic, (message) => {
+        const subscription = subscribeToTopic(sessionTopic, async (message) => {
             try {
                 const data = JSON.parse(message.body);
                 console.log('📨 세션 메시지 수신:', data);
                 
                 if (data.type === 'EXAM_READY' || data.examReady) {
-                    console.log('✅ 시험 준비 완료!');
-                    setExamReady(true);
+                    console.log('✅ 시험 준비 완료 메시지 수신!');
                     
-                    // 브라우저 알림 표시
-                    if (Notification.permission === 'granted') {
-                        new Notification('시험 준비 완료', {
-                            body: '시험이 준비되었습니다. 시험 시작 버튼을 클릭하세요!',
-                            icon: '/vite.svg',
-                            tag: `exam_ready_${sessionId}`,
-                            requireInteraction: true
-                        });
-                    } else if (Notification.permission !== 'denied') {
-                        // 권한 요청
-                        Notification.requestPermission().then(permission => {
-                            if (permission === 'granted') {
+                    // API를 통해 최신 시험 상태 확인
+                    try {
+                        const examData = await fetchExamBySessionId(sessionId);
+                        console.log('STOMP 메시지 후 API 조회 결과:', examData);
+                        
+                        if (examData && examData.isReady) {
+                            setExam(examData);
+                            setExamReady(true);
+                            console.log('✅ 시험 준비 완료 확인됨!');
+                            
+                            // 브라우저 알림 표시
+                            if (Notification.permission === 'granted') {
                                 new Notification('시험 준비 완료', {
                                     body: '시험이 준비되었습니다. 시험 시작 버튼을 클릭하세요!',
                                     icon: '/vite.svg',
                                     tag: `exam_ready_${sessionId}`,
                                     requireInteraction: true
                                 });
+                            } else if (Notification.permission !== 'denied') {
+                                // 권한 요청
+                                Notification.requestPermission().then(permission => {
+                                    if (permission === 'granted') {
+                                        new Notification('시험 준비 완료', {
+                                            body: '시험이 준비되었습니다. 시험 시작 버튼을 클릭하세요!',
+                                            icon: '/vite.svg',
+                                            tag: `exam_ready_${sessionId}`,
+                                            requireInteraction: true
+                                        });
+                                    }
+                                });
                             }
-                        });
+                        } else {
+                            console.log('⚠️ STOMP 메시지는 받았지만 시험 상태가 아직 준비되지 않음');
+                        }
+                    } catch (error) {
+                        console.error('STOMP 메시지 후 시험 상태 확인 실패:', error);
                     }
                 }
             } catch (error) {
@@ -226,35 +254,21 @@ export default function Session() {
         }
         
         try {
+            console.log('시험 시작 - 실제 API 호출');
+            
             // 1. 빈 submission 생성
-            const submissionResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    examId: exam.id,
-                    studentId: studentId,
-                    startTime: new Date().toISOString(),
-                    status: "in_progress"
-                })
-            });
+            const submissionData = {
+                examId: exam.id,
+                studentId: studentId,
+                startTime: new Date().toISOString(),
+                status: "in_progress"
+            };
             
-            if (!submissionResponse.ok) {
-                throw new Error(`Submission 생성 실패: ${submissionResponse.status}`);
-            }
-            
-            const submission = await submissionResponse.json();
+            const submission = await createSubmission(submissionData);
             console.log('시험 제출 데이터가 생성되었습니다:', submission);
             
             // 2. examId로 questions 조회
-            const questionsResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${exam.id}/questions`);
-            
-            if (!questionsResponse.ok) {
-                throw new Error(`Questions 조회 실패: ${questionsResponse.status}`);
-            }
-            
-            const questions = await questionsResponse.json();
+            const questions = await fetchQuestionsByExamId(exam.id);
             console.log('시험 문제를 조회했습니다:', questions);
             
             // 3. 첫 번째 문제 페이지로 이동
@@ -390,13 +404,13 @@ export default function Session() {
                                         <strong>설명:</strong> {exam.description}
                                     </p>
                                     <p style={{ margin: '8px 0', color: 'var(--text)' }}>
-                                        <strong>문제 수:</strong> {mockQuestions.length}문제
+                                        <strong>문제 수:</strong> 확인 중...
                                     </p>
                                     <p style={{ margin: '8px 0', color: 'var(--text)' }}>
-                                        <strong>총점:</strong> {exam.totalPoints}점
+                                        <strong>총점:</strong> 확인 중...
                                     </p>
                                     <p style={{ margin: '8px 0', color: 'var(--text)' }}>
-                                        <strong>제한시간:</strong> {exam.duration}분
+                                        <strong>제한시간:</strong> 확인 중...
                                     </p>
                                 </div>
                                 

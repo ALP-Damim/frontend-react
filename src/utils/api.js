@@ -552,12 +552,17 @@ export const fetchQuestionsByExamId = async (examId) => {
 // 시험 제출 데이터 생성 API
 export const createSubmission = async (submissionData) => {
     try {
-        const response = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions', {
+        const response = await fetch('https://team02-apim.azure-api.net/result-service/submissions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(submissionData)
+            body: JSON.stringify({
+                examId: submissionData.examId,
+                userId: submissionData.studentId, // studentId를 userId로 매핑
+                totalScore: 0, // 초기 점수는 0
+                feedback: '' // 초기 피드백은 빈 문자열
+            })
         });
         
         if (!response.ok) {
@@ -572,25 +577,47 @@ export const createSubmission = async (submissionData) => {
 };
 
 // 개별 답안 제출 API
-export const submitAnswer = async (submissionId, questionId, answerData) => {
+export const submitAnswer = async (examId, userId, questionId, answerData) => {
     try {
-        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submissionId}/answers`, {
+        const requestBody = {
+            examId: examId,
+            userId: userId,
+            questionId: questionId,
+            answerText: answerData.answer,
+            isCorrect: false, // 초기값, 나중에 서버에서 판정
+            score: 0, // 초기값, 나중에 서버에서 계산
+            solvingTime: answerData.solvingTime || 0
+        };
+        
+        console.log('답안 제출 요청:', {
+            url: 'https://team02-apim.azure-api.net/result-service/submission-answers',
+            method: 'POST',
+            body: requestBody
+        });
+        
+        const response = await fetch('https://team02-apim.azure-api.net/result-service/submission-answers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                questionId: questionId,
-                answer: answerData.answer,
-                submittedAt: new Date().toISOString()
-            })
+            body: JSON.stringify(requestBody)
+        });
+        
+        console.log('답안 제출 응답:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            const errorText = await response.text();
+            console.error('답안 제출 응답 에러:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         
-        return await response.json();
+        const result = await response.json();
+        console.log('답안 제출 성공:', result);
+        return result;
     } catch (error) {
         console.error('답안 제출 실패:', error);
         throw error;

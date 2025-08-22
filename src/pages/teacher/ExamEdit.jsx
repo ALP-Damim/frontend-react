@@ -8,7 +8,6 @@ import { useStomp } from '../../contexts/StompContext';
 const fetchQuestionsByExamId = async (examId) => {
     try {
         const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`);
-        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -121,7 +120,7 @@ export default function ExamEdit() {
     const { examId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const teacherId = 2; // 실제 로그인 사용자 ID로 교체 필요
+    const teacherId = 4; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
     const { sendMessage, connect, disconnect } = useStomp();
@@ -307,9 +306,8 @@ export default function ExamEdit() {
 
         setSaving(true);
         try {
-            // TODO: 시험 수정 API 호출
-            console.log('시험 임시 저장:', {
-                examId: exam.id,
+            // 1. 시험 정보 수정 (임시 저장)
+            const examUpdateData = {
                 sessionId: sessionId,
                 name: examData.name,
                 difficulty: examData.difficulty,

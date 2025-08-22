@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
+import { submitAnswer } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -140,22 +141,12 @@ export default function ExamQuestion() {
                 console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
                 
                 // 답안 API 저장
-                const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        submissionId: submission.id,
-                        questionId: currentQuestion.id,
-                        answer: currentAnswer,
-                        timeSpent: timeSpent
-                    })
-                });
+                const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
                 
-                if (!answerResponse.ok) {
-                    throw new Error(`답안 저장 실패: ${answerResponse.status}`);
-                }
+                await submitAnswer(exam.id, studentId, currentQuestion.id, {
+                    answer: currentAnswer,
+                    solvingTime: timeSpent
+                });
                 
                 // 다음 문제로 이동 (되돌리기 불가)
                 const nextIndex = currentQuestionIndex + 1;
@@ -191,39 +182,13 @@ export default function ExamQuestion() {
             console.log(`마지막 문제 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
             
             // 마지막 답안 API 저장
-            const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    submissionId: submission.id,
-                    questionId: currentQuestion.id,
-                    answer: currentAnswer,
-                    timeSpent: timeSpent
-                })
-            });
+            const currentQuestion = questions[currentQuestionIndex];
+            const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
             
-            if (!answerResponse.ok) {
-                throw new Error(`답안 저장 실패: ${answerResponse.status}`);
-            }
-
-            // submission 완료 처리
-            const submissionResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submission.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...submission,
-                    status: "completed",
-                    endTime: new Date().toISOString()
-                })
+            await submitAnswer(exam.id, studentId, currentQuestion.id, {
+                answer: currentAnswer,
+                solvingTime: timeSpent
             });
-            
-            if (!submissionResponse.ok) {
-                throw new Error(`Submission 완료 처리 실패: ${submissionResponse.status}`);
-            }
 
             console.log('모든 답안 제출 완료');
 
@@ -239,13 +204,16 @@ export default function ExamQuestion() {
                 } else {
                     // 주관식은 부분 점수 (답안이 있으면 기본 점수)
                     score = userAnswer.trim() ? Math.floor(question.points * 0.7) : 0;
-                    isCorrect = userAnswer.trim().toLowerCase().includes(question.correctAnswer.toLowerCase());
+                    // correctAnswer가 존재하는 경우에만 비교
+                    if (question.correctAnswer && userAnswer.trim()) {
+                        isCorrect = userAnswer.trim().toLowerCase().includes(question.correctAnswer.toLowerCase());
+                    }
                 }
 
                 return {
                     questionId: question.id,
                     userAnswer,
-                    correctAnswer: question.correctAnswer,
+                    correctAnswer: question.correctAnswer || '',
                     isCorrect,
                     score,
                     maxScore: question.points
@@ -269,6 +237,13 @@ export default function ExamQuestion() {
             });
         } catch (error) {
             console.error('시험 제출 실패:', error);
+            console.error('에러 상세 정보:', {
+                message: error.message,
+                stack: error.stack,
+                examId: exam?.id,
+                studentId: 27,
+                questionId: currentQuestion?.id
+            });
             setError('시험 제출에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setLoading(false);
