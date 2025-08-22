@@ -370,26 +370,24 @@ export default function Result() {
                                         </div>
                                     </div>
                                     
-                                    {question.correctAnswer && (
-                                        <div>
-                                            <div style={{ 
-                                                fontWeight: 'bold', 
-                                                marginBottom: '8px',
-                                                color: 'var(--text)'
-                                            }}>
-                                                정답:
-                                            </div>
-                                            <div style={{ 
-                                                padding: '12px',
-                                                backgroundColor: 'var(--success)',
-                                                color: 'white',
-                                                borderRadius: '8px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                {question.correctAnswer}
-                                            </div>
+                                    <div>
+                                        <div style={{ 
+                                            fontWeight: 'bold', 
+                                            marginBottom: '8px',
+                                            color: 'var(--text)'
+                                        }}>
+                                            정답:
                                         </div>
-                                    )}
+                                        <div style={{ 
+                                            padding: '12px',
+                                            backgroundColor: 'var(--success)',
+                                            color: 'black',
+                                            borderRadius: '8px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            {question.answerKey || '정답 정보 없음'}
+                                        </div>
+                                    </div>
                                 </div>
                             );
                         })}
