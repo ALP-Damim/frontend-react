@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/common';
-import { fetchExamResult, fetchSubmissionAnswers, fetchQuestionsByExamId } from '../../utils/api';
+import { fetchExamResult, fetchSubmissionAnswers, fetchQuestionsByExamId, fetchAIAdvice } from '../../utils/api';
 
 // 학생용 네비게이션 링크
 const studentNavigationLinks = [
@@ -21,6 +21,9 @@ export default function Result() {
     const [submissionAnswers, setSubmissionAnswers] = useState([]);
     const [questions, setQuestions] = useState([]);
     const [exam, setExam] = useState(null);
+    const [aiAdvice, setAiAdvice] = useState(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiRequested, setAiRequested] = useState(false);
     
     const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
 
@@ -63,6 +66,8 @@ export default function Result() {
                     });
                 }
 
+                // 5. AI 피드백은 버튼 클릭 시에만 조회하도록 변경
+
             } catch (err) {
                 console.error('시험 결과 로드 실패:', err);
                 setError('시험 결과를 불러오는데 실패했습니다.');
@@ -73,6 +78,64 @@ export default function Result() {
 
         loadExamResult();
     }, [examId, studentId, location.state]);
+
+    // AI 피드백 로드 함수 (비동기 처리)
+    const loadAIAdvice = (examId, studentId, questions, answers) => {
+        // 이미 요청했으면 중복 요청 방지
+        if (aiRequested) {
+            return;
+        }
+        
+        // 요청 상태 설정
+        setAiRequested(true);
+        setAiLoading(true);
+        
+        // 백그라운드에서 비동기 처리
+        (async () => {
+            try {
+                // 시험 결과 요약 정보 생성
+                const totalScore = answers.reduce((sum, answer) => {
+                    const score = typeof answer.score === 'number' ? answer.score : 
+                                typeof answer.score === 'string' ? parseFloat(answer.score) || 0 : 0;
+                    return sum + score;
+                }, 0);
+                
+                const maxScore = questions.reduce((sum, question) => {
+                    const points = typeof question.points === 'number' ? question.points : 
+                                 typeof question.points === 'string' ? parseFloat(question.points) || 0 : 0;
+                    return sum + points;
+                }, 0);
+                
+                const accuracy = questions.length > 0 ? 
+                    Math.round((answers.filter(a => a.isCorrect === true || a.isCorrect === "true" || a.isCorrect === 1).length / questions.length) * 100) : 0;
+                
+                // 과목 정보 (location.state에서 가져오거나 기본값 사용)
+                const subjectInfo = location.state?.exam?.subject || 
+                                  location.state?.exam?.className || 
+                                  exam?.name || 
+                                  '시험';
+
+                // AI 피드백 요청 데이터 구성 (API 형식 제한에 맞춤)
+                const adviceData = {
+                    studentId: `백엔드 개발자가 대충 만들고 가서 이렇게 형식을 안 맞출 수 밖에 없어. 날 살려줘 제발.`,
+                    subject: subjectInfo,
+                    grade: "제발 좀 맞춰줘",
+                    score: totalScore
+                };
+                
+                const advice = await fetchAIAdvice(adviceData);
+                setAiAdvice(advice);
+                
+            } catch (error) {
+                console.error('AI 피드백 로드 실패:', error);
+                setAiAdvice(null);
+                // 실패 시 요청 상태 초기화하여 재시도 가능하게 함
+                setAiRequested(false);
+            } finally {
+                setAiLoading(false);
+            }
+        })();
+    };
 
     // 정답률 계산 (더 안전한 방식)
     const calculateAccuracy = () => {
@@ -231,181 +294,247 @@ export default function Result() {
                         </p>
                     </div>
 
-                    {/* 점수 요약 */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                        gap: '20px',
-                        marginBottom: '32px'
-                    }}>
-                        <div style={{ 
-                            padding: '24px', 
-                            backgroundColor: 'var(--hover)', 
-                            borderRadius: '12px',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>
-                                {totalScore}
-                            </div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-                                획득 점수
-                            </div>
-                        </div>
-                        
-                        <div style={{ 
-                            padding: '24px', 
-                            backgroundColor: 'var(--hover)', 
-                            borderRadius: '12px',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text)' }}>
-                                {maxScore}
-                            </div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-                                만점
-                            </div>
-                        </div>
-                        
-                        <div style={{ 
-                            padding: '24px', 
-                            backgroundColor: 'var(--hover)', 
-                            borderRadius: '12px',
-                            textAlign: 'center'
-                        }}>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: accuracy >= 80 ? 'var(--success)' : accuracy >= 60 ? 'var(--warn)' : 'var(--error)' }}>
-                                {accuracy}%
-                            </div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-                                정답률
-                            </div>
-                        </div>
-                    </div>
+                                         {/* 점수 요약 */}
+                     <div style={{ 
+                         display: 'grid', 
+                         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                         gap: '20px',
+                         marginBottom: '32px'
+                     }}>
+                         <div style={{ 
+                             padding: '24px', 
+                             backgroundColor: 'var(--hover)', 
+                             borderRadius: '12px',
+                             textAlign: 'center'
+                         }}>
+                             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--accent)' }}>
+                                 {totalScore}
+                             </div>
+                             <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                                 획득 점수
+                             </div>
+                         </div>
+                         
+                         <div style={{ 
+                             padding: '24px', 
+                             backgroundColor: 'var(--hover)', 
+                             borderRadius: '12px',
+                             textAlign: 'center'
+                         }}>
+                             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--text)' }}>
+                                 {maxScore}
+                             </div>
+                             <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                                 만점
+                             </div>
+                         </div>
+                         
+                         <div style={{ 
+                             padding: '24px', 
+                             backgroundColor: 'var(--hover)', 
+                             borderRadius: '12px',
+                             textAlign: 'center'
+                         }}>
+                             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: accuracy >= 80 ? 'var(--success)' : accuracy >= 60 ? 'var(--warn)' : 'var(--error)' }}>
+                                 {accuracy}%
+                             </div>
+                             <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                                 정답률
+                             </div>
+                         </div>
+                     </div>
 
-                    {/* 답안 상세 */}
-                    <div style={{ marginBottom: '32px' }}>
-                        <h2 style={{ marginBottom: '20px', color: 'var(--text)' }}>답안 상세</h2>
-                        
-                        {questions.map((question, index) => {
-                            const answer = submissionAnswers.find(a => a.questionId === question.id);
-                            const isCorrect = answer?.isCorrect || false;
-                            const userAnswer = answer?.answerText || '';
-                            const score = answer?.score || 0;
-                            
-                            return (
-                                <div key={question.id} style={{ 
-                                    marginBottom: '20px',
-                                    padding: '20px',
-                                    border: `2px solid ${isCorrect ? 'var(--success)' : 'var(--error)'}`,
-                                    borderRadius: '12px',
-                                    backgroundColor: isCorrect ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'
-                                }}>
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'space-between', 
-                                        alignItems: 'center',
-                                        marginBottom: '16px'
-                                    }}>
-                                        <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
-                                            문제 {index + 1}
-                                        </h3>
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '12px'
-                                        }}>
-                                            <span style={{ 
-                                                padding: '4px 12px',
-                                                borderRadius: '20px',
-                                                fontSize: '0.8rem',
-                                                fontWeight: 'bold',
-                                                backgroundColor: isCorrect ? 'var(--success)' : 'var(--error)',
-                                                color: 'white'
-                                            }}>
-                                                {isCorrect ? '정답' : '오답'}
-                                            </span>
-                                            <span style={{ 
-                                                fontSize: '1.1rem', 
-                                                fontWeight: 'bold',
-                                                color: 'var(--accent)'
-                                            }}>
-                                                {score}점
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ 
-                                            fontWeight: 'bold', 
-                                            marginBottom: '8px',
-                                            color: 'var(--text)'
-                                        }}>
-                                            문제:
-                                        </div>
-                                        <div style={{ 
-                                            padding: '12px',
-                                            backgroundColor: 'var(--background)',
-                                            borderRadius: '8px',
-                                            border: '1px solid var(--border)'
-                                        }}>
-                                            {question.body}
-                                        </div>
-                                    </div>
-                                    
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ 
-                                            fontWeight: 'bold', 
-                                            marginBottom: '8px',
-                                            color: 'var(--text)'
-                                        }}>
-                                            내 답안:
-                                        </div>
-                                        <div style={{ 
-                                            padding: '12px',
-                                            backgroundColor: 'var(--background)',
-                                            borderRadius: '8px',
-                                            border: '1px solid var(--border)',
-                                            minHeight: '60px'
-                                        }}>
-                                            {userAnswer || '답안 없음'}
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div style={{ 
-                                            fontWeight: 'bold', 
-                                            marginBottom: '8px',
-                                            color: 'var(--text)'
-                                        }}>
-                                            정답:
-                                        </div>
-                                        <div style={{ 
-                                            padding: '12px',
-                                            backgroundColor: 'var(--success)',
-                                            color: 'black',
-                                            borderRadius: '8px',
-                                            fontWeight: 'bold'
-                                        }}>
-                                            {question.answerKey || '정답 정보 없음'}
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                     {/* AI 피드백 섹션 */}
+                     <div style={{ 
+                         marginBottom: '32px',
+                         padding: '20px',
+                         backgroundColor: 'var(--hover)',
+                         borderRadius: '12px',
+                         border: '1px solid var(--border)'
+                     }}>
+                         <h3 style={{ marginBottom: '12px', color: 'var(--text)' }}>AI 피드백</h3>
+                         
+                         {aiLoading ? (
+                             <div style={{ textAlign: 'center', padding: '20px' }}>
+                                 <div style={{ color: 'var(--muted)' }}>AI가 피드백을 생성하는 중...</div>
+                             </div>
+                         ) : aiAdvice ? (
+                             <div>
+                                 <div style={{ 
+                                     padding: '16px',
+                                     backgroundColor: 'var(--background)',
+                                     borderRadius: '8px',
+                                     border: '1px solid var(--border)'
+                                 }}>
+                                     <div style={{ 
+                                         fontWeight: 'bold', 
+                                         marginBottom: '8px',
+                                         color: 'var(--accent)'
+                                     }}>
+                                         AI 조언:
+                                     </div>
+                                     <div style={{ 
+                                         lineHeight: '1.6',
+                                         whiteSpace: 'pre-wrap'
+                                     }}>
+                                         {aiAdvice.advice || '피드백을 받을 수 없습니다.'}
+                                     </div>
+                                 </div>
+                             </div>
+                         ) : aiRequested ? (
+                             <div style={{ textAlign: 'center', padding: '20px' }}>
+                                 <div style={{ color: 'var(--muted)' }}>
+                                     AI 피드백을 불러올 수 없습니다.
+                                 </div>
+                                 <button
+                                     className="btn"
+                                     onClick={() => loadAIAdvice(examId, studentId, questions, submissionAnswers)}
+                                     style={{ 
+                                         marginTop: '12px',
+                                         backgroundColor: 'var(--accent)', 
+                                         color: 'white',
+                                         padding: '8px 16px',
+                                         fontSize: '0.9rem'
+                                     }}
+                                 >
+                                     다시 시도
+                                 </button>
+                             </div>
+                         ) : (
+                             <div style={{ textAlign: 'center', padding: '20px' }}>
+                                 <div style={{ color: 'var(--muted)', marginBottom: '16px' }}>
+                                     AI 피드백을 받아보시겠습니까?
+                                 </div>
+                                 <button
+                                     className="btn"
+                                     onClick={() => loadAIAdvice(examId, studentId, questions, submissionAnswers)}
+                                     style={{ 
+                                         backgroundColor: 'var(--accent)', 
+                                         color: 'white',
+                                         padding: '12px 24px',
+                                         fontSize: '1rem',
+                                         borderRadius: '8px',
+                                         border: 'none',
+                                         cursor: 'pointer'
+                                     }}
+                                 >
+                                     AI 피드백 받기
+                                 </button>
+                             </div>
+                         )}
+                     </div>
 
-                    {/* AI 피드백 섹션 (준비 중) */}
-                    <div style={{ 
-                        marginBottom: '32px',
-                        padding: '20px',
-                        backgroundColor: 'var(--hover)',
-                        borderRadius: '12px',
-                        border: '2px dashed var(--border)'
-                    }}>
-                        <h3 style={{ marginBottom: '12px', color: 'var(--text)' }}>AI 피드백</h3>
-                        <p style={{ color: 'var(--muted)', margin: 0 }}>
-                            AI 피드백 기능이 곧 추가될 예정입니다.
-                        </p>
-                    </div>
+                     {/* 답안 상세 */}
+                     <div style={{ marginBottom: '32px' }}>
+                         <h2 style={{ marginBottom: '20px', color: 'var(--text)' }}>답안 상세</h2>
+                         
+                         {questions.map((question, index) => {
+                             const answer = submissionAnswers.find(a => a.questionId === question.id);
+                             const isCorrect = answer?.isCorrect || false;
+                             const userAnswer = answer?.answerText || '';
+                             const score = answer?.score || 0;
+                             
+                             return (
+                                 <div key={question.id} style={{ 
+                                     marginBottom: '20px',
+                                     padding: '20px',
+                                     border: `2px solid ${isCorrect ? 'var(--success)' : 'var(--error)'}`,
+                                     borderRadius: '12px',
+                                     backgroundColor: isCorrect ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)'
+                                 }}>
+                                     <div style={{ 
+                                         display: 'flex', 
+                                         justifyContent: 'space-between', 
+                                         alignItems: 'center',
+                                         marginBottom: '16px'
+                                     }}>
+                                         <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
+                                             문제 {index + 1}
+                                         </h3>
+                                         <div style={{ 
+                                             display: 'flex', 
+                                             alignItems: 'center', 
+                                             gap: '12px'
+                                         }}>
+                                             <span style={{ 
+                                                 padding: '4px 12px',
+                                                 borderRadius: '20px',
+                                                 fontSize: '0.8rem',
+                                                 fontWeight: 'bold',
+                                                 backgroundColor: isCorrect ? 'var(--success)' : 'var(--error)',
+                                                 color: 'black'
+                                             }}>
+                                                 {isCorrect ? '정답' : '오답'}
+                                             </span>
+                                             <span style={{ 
+                                                 fontSize: '1.1rem', 
+                                                 fontWeight: 'bold',
+                                                 color: 'var(--accent)'
+                                             }}>
+                                                 {score}점
+                                             </span>
+                                         </div>
+                                     </div>
+                                     
+                                     <div style={{ marginBottom: '16px' }}>
+                                         <div style={{ 
+                                             fontWeight: 'bold', 
+                                             marginBottom: '8px',
+                                             color: 'var(--text)'
+                                         }}>
+                                             문제:
+                                         </div>
+                                         <div style={{ 
+                                             padding: '12px',
+                                             backgroundColor: 'var(--background)',
+                                             borderRadius: '8px',
+                                             border: '1px solid var(--border)'
+                                         }}>
+                                             {question.body}
+                                         </div>
+                                     </div>
+                                     
+                                     <div style={{ marginBottom: '16px' }}>
+                                         <div style={{ 
+                                             fontWeight: 'bold', 
+                                             marginBottom: '8px',
+                                             color: 'var(--text)'
+                                         }}>
+                                             내 답안:
+                                         </div>
+                                         <div style={{ 
+                                             padding: '12px',
+                                             backgroundColor: 'var(--background)',
+                                             borderRadius: '8px',
+                                             border: '1px solid var(--border)',
+                                             minHeight: '60px'
+                                         }}>
+                                             {userAnswer || '답안 없음'}
+                                         </div>
+                                     </div>
+                                     
+                                     <div>
+                                         <div style={{ 
+                                             fontWeight: 'bold', 
+                                             marginBottom: '8px',
+                                             color: 'var(--text)'
+                                         }}>
+                                             정답:
+                                         </div>
+                                         <div style={{ 
+                                             padding: '12px',
+                                             backgroundColor: 'var(--success)',
+                                             color: 'black',
+                                             borderRadius: '8px',
+                                             fontWeight: 'bold'
+                                         }}>
+                                             {question.answerKey || '정답 정보 없음'}
+                                         </div>
+                                     </div>
+                                 </div>
+                             );
+                         })}
+                     </div>
 
                     {/* 하단 버튼 */}
                     <div style={{ 

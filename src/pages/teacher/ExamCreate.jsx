@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
-import { fetchCurrentSession, fetchExamBySessionId } from '../../utils/api';
+import { fetchCurrentSession, fetchExamBySessionId, fetchAIAdvice } from '../../utils/api';
 import { useStomp } from '../../contexts/StompContext';
 
 // 문제 목록 조회 API
@@ -94,6 +94,10 @@ export default function ExamCreate() {
         difficulty: 'EASY',
         isReady: false
     });
+    
+    // AI 추천 관련 상태
+    const [aiRecommendations, setAiRecommendations] = useState({});
+    const [aiLoading, setAiLoading] = useState({});
 
     // 시험 데이터 초기화
     useEffect(() => {
@@ -220,6 +224,46 @@ export default function ExamCreate() {
     // 문제 삭제
     const handleDeleteQuestion = (index) => {
         setQuestions(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // AI 추천 요청
+    const handleAIRecommendation = async (questionIndex) => {
+        const question = questions[questionIndex];
+        
+        // 이미 로딩 중이면 중복 요청 방지
+        if (aiLoading[questionIndex]) {
+            return;
+        }
+
+        // 로딩 상태 설정
+        setAiLoading(prev => ({ ...prev, [questionIndex]: true }));
+        
+        try {
+            // AI 추천 요청 데이터 구성
+            const adviceData = {
+                studentId: `강사가 단답형 문제를 만들고 있어. 문제 내용: "${question.body}"`,
+                subject: "단답형 문제 정답 추천",
+                grade: "정답을 추천해줘",
+                score: 0
+            };
+            
+            const advice = await fetchAIAdvice(adviceData);
+            
+            // 추천 결과 저장
+            setAiRecommendations(prev => ({ 
+                ...prev, 
+                [questionIndex]: advice.advice || '추천을 받을 수 없습니다.' 
+            }));
+            
+        } catch (error) {
+            console.error('AI 추천 요청 실패:', error);
+            setAiRecommendations(prev => ({ 
+                ...prev, 
+                [questionIndex]: 'AI 추천을 받을 수 없습니다.' 
+            }));
+        } finally {
+            setAiLoading(prev => ({ ...prev, [questionIndex]: false }));
+        }
     };
 
     // 문제 데이터 변경
@@ -536,7 +580,28 @@ export default function ExamCreate() {
                                             backgroundColor: 'var(--hover)'
                                         }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                                <h4 style={{ margin: 0 }}>문제 {index + 1}</h4>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <h4 style={{ margin: 0 }}>문제 {index + 1}</h4>
+                                                    {question.qtype === 'SHORT' && (
+                                                        <button 
+                                                            className="btn"
+                                                            onClick={() => handleAIRecommendation(index)}
+                                                            disabled={aiLoading[index]}
+                                                            style={{ 
+                                                                backgroundColor: 'var(--accent)', 
+                                                                color: 'white', 
+                                                                padding: '6px 12px',
+                                                                fontSize: '0.8rem',
+                                                                borderRadius: '6px',
+                                                                border: 'none',
+                                                                cursor: aiLoading[index] ? 'not-allowed' : 'pointer',
+                                                                opacity: aiLoading[index] ? 0.6 : 1
+                                                            }}
+                                                        >
+                                                            {aiLoading[index] ? 'AI 분석 중...' : '🤖 AI 정답 추천'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <button 
                                                     className="btn"
                                                     onClick={() => handleDeleteQuestion(index)}
@@ -609,6 +674,33 @@ export default function ExamCreate() {
                                                                     }}
                                                                 />
                                                             ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* AI 추천 결과 표시 */}
+                                                {question.qtype === 'SHORT' && aiRecommendations[index] && (
+                                                    <div style={{ 
+                                                        marginBottom: '16px',
+                                                        padding: '12px',
+                                                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                                        border: '1px solid var(--success)',
+                                                        borderRadius: '8px'
+                                                    }}>
+                                                        <div style={{ 
+                                                            fontWeight: 'bold', 
+                                                            marginBottom: '8px',
+                                                            color: 'var(--success)',
+                                                            fontSize: '0.9rem'
+                                                        }}>
+                                                            🤖 AI 정답 추천:
+                                                        </div>
+                                                        <div style={{ 
+                                                            lineHeight: '1.5',
+                                                            fontSize: '0.9rem',
+                                                            color: 'var(--text)'
+                                                        }}>
+                                                            {aiRecommendations[index]}
                                                         </div>
                                                     </div>
                                                 )}

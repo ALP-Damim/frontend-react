@@ -787,3 +787,49 @@ export const fetchStudentExamGrades = async (studentId) => {
 };
 
 
+
+// AI 피드백 조회 API
+export const fetchAIAdvice = async (adviceData) => {
+    try {
+        const response = await fetch('https://team02-apim.azure-api.net/msa-ai/api/v1/advice', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                studentId: adviceData.studentId || "나는 학생이야 적당한 조언좀 줄래",
+                subject: adviceData.subject || "시험 결과 분석",
+                grade: adviceData.grade || "부탁해",
+                score: adviceData.score || 0
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('AI 피드백 조회 성공:', result);
+        
+        // 유니코드로 오는 한글 응답을 디코딩
+        if (result.advice) {
+            try {
+                // 유니코드 이스케이프 시퀀스를 한글로 변환
+                const decodedAdvice = result.advice.replace(/\\u[\dA-F]{4}/gi, (match) => {
+                    return String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16));
+                });
+                return { advice: decodedAdvice, status: result.status };
+            } catch (decodeError) {
+                console.warn('AI 피드백 디코딩 실패, 원본 반환:', decodeError);
+                return result;
+            }
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('AI 피드백 조회 실패:', error);
+        throw error;
+    }
+};
+
+
