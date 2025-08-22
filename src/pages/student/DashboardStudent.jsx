@@ -38,7 +38,7 @@ const studentNavigationLinks = [
 
 export default function DashboardStudent() {
     // 실제 적용 시 로그인 유저의 studentId를 사용
-    const studentId = 21; // 임시 고정
+    const studentId = 22; // 임시 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);

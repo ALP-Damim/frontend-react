@@ -24,8 +24,10 @@ export default function Result() {
     const [aiAdvice, setAiAdvice] = useState(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiRequested, setAiRequested] = useState(false);
+    const [aiRetryCount, setAiRetryCount] = useState(0);
+    const [aiError, setAiError] = useState(null);
     
-    const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 22; // 실제 로그인 사용자 ID로 교체 필요
 
     useEffect(() => {
         const loadExamResult = async () => {
@@ -81,14 +83,16 @@ export default function Result() {
 
     // AI 피드백 로드 함수 (비동기 처리)
     const loadAIAdvice = (examId, studentId, questions, answers) => {
-        // 이미 요청했으면 중복 요청 방지
-        if (aiRequested) {
+        // 최대 재시도 횟수 체크
+        if (aiRetryCount >= 3) {
+            setAiError('최대 재시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.');
             return;
         }
         
         // 요청 상태 설정
         setAiRequested(true);
         setAiLoading(true);
+        setAiError(null);
         
         // 백그라운드에서 비동기 처리
         (async () => {
@@ -125,10 +129,13 @@ export default function Result() {
                 
                 const advice = await fetchAIAdvice(adviceData);
                 setAiAdvice(advice);
+                setAiError(null);
                 
             } catch (error) {
                 console.error('AI 피드백 로드 실패:', error);
                 setAiAdvice(null);
+                setAiError(`AI 피드백을 불러올 수 없습니다. (${aiRetryCount + 1}/3)`);
+                setAiRetryCount(prev => prev + 1);
                 // 실패 시 요청 상태 초기화하여 재시도 가능하게 함
                 setAiRequested(false);
             } finally {
@@ -381,44 +388,55 @@ export default function Result() {
                                      </div>
                                  </div>
                              </div>
-                         ) : aiRequested ? (
-                             <div style={{ textAlign: 'center', padding: '20px' }}>
-                                 <div style={{ color: 'var(--muted)' }}>
-                                     AI 피드백을 불러올 수 없습니다.
-                                 </div>
-                                 <button
-                                     className="btn"
-                                     onClick={() => loadAIAdvice(examId, studentId, questions, submissionAnswers)}
-                                     style={{ 
-                                         marginTop: '12px',
-                                         backgroundColor: 'var(--accent)', 
-                                         color: 'white',
-                                         padding: '8px 16px',
-                                         fontSize: '0.9rem'
-                                     }}
-                                 >
-                                     다시 시도
-                                 </button>
-                             </div>
+                                                   ) : aiRequested ? (
+                              <div style={{ textAlign: 'center', padding: '20px' }}>
+                                  <div style={{ color: 'var(--warn)', marginBottom: '12px' }}>
+                                      {aiError || 'AI 피드백을 불러올 수 없습니다.'}
+                                  </div>
+                                  {aiRetryCount < 3 ? (
+                                      <button
+                                          className="btn"
+                                          onClick={() => loadAIAdvice(examId, studentId, questions, submissionAnswers)}
+                                          style={{ 
+                                              backgroundColor: 'var(--accent)', 
+                                              color: 'white',
+                                              padding: '8px 16px',
+                                              fontSize: '0.9rem'
+                                          }}
+                                      >
+                                          다시 시도 ({aiRetryCount}/3)
+                                      </button>
+                                  ) : (
+                                      <div style={{ color: 'var(--error)', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                          AI 피드백을 3번 실패했습니다. 잠시 후 다시 시도해주세요.
+                                      </div>
+                                  )}
+                              </div>
                          ) : (
                              <div style={{ textAlign: 'center', padding: '20px' }}>
                                  <div style={{ color: 'var(--muted)', marginBottom: '16px' }}>
                                      AI 피드백을 받아보시겠습니까?
+                                     {aiRetryCount > 0 && (
+                                         <div style={{ fontSize: '0.9rem', marginTop: '8px', color: 'var(--warn)' }}>
+                                             (재시도 횟수: {aiRetryCount}/3)
+                                         </div>
+                                     )}
                                  </div>
                                  <button
                                      className="btn"
                                      onClick={() => loadAIAdvice(examId, studentId, questions, submissionAnswers)}
+                                     disabled={aiRetryCount >= 3}
                                      style={{ 
-                                         backgroundColor: 'var(--accent)', 
+                                         backgroundColor: aiRetryCount >= 3 ? 'var(--muted)' : 'var(--accent)', 
                                          color: 'white',
                                          padding: '12px 24px',
                                          fontSize: '1rem',
                                          borderRadius: '8px',
                                          border: 'none',
-                                         cursor: 'pointer'
+                                         cursor: aiRetryCount >= 3 ? 'not-allowed' : 'pointer'
                                      }}
                                  >
-                                     AI 피드백 받기
+                                     {aiRetryCount >= 3 ? '재시도 횟수 초과' : 'AI 피드백 받기'}
                                  </button>
                              </div>
                          )}

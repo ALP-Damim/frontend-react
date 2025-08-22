@@ -95,9 +95,9 @@ function Home() {
                             강사 대시보드
                         </Link>
 
-                        <Link className="btn btn-outline" to="/notification-test" style={{ textAlign: 'center' }}>
+                        {/* <Link className="btn btn-outline" to="/notification-test" style={{ textAlign: 'center' }}>
                             알람 테스트
-                        </Link>
+                        </Link> */}
                     </div>
                 </div>
                 <div className="card">

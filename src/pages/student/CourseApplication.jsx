@@ -13,7 +13,7 @@ const studentNavigationLinks = [
 const DAY = { MON:1, TUE:2, WED:4, THU:8, FRI:16, SAT:32, SUN:64 };
 
 export default function CourseApplication(){
-    const studentId = 21; // TODO: auth 연동 시 대체
+    const studentId = 22; // TODO: auth 연동 시 대체
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);

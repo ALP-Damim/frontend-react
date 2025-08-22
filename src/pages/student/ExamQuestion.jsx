@@ -141,7 +141,7 @@ export default function ExamQuestion() {
                 console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
                 
                 // 답안 API 저장
-                const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
+                const studentId = 22; // 실제 로그인 사용자 ID로 교체 필요
                 
                 await submitAnswer(exam.id, studentId, currentQuestion.id, {
                     answer: currentAnswer,
@@ -183,7 +183,7 @@ export default function ExamQuestion() {
             
             // 마지막 답안 API 저장
             const currentQuestion = questions[currentQuestionIndex];
-            const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
+            const studentId = 22; // 실제 로그인 사용자 ID로 교체 필요
             
             await submitAnswer(exam.id, studentId, currentQuestion.id, {
                 answer: currentAnswer,

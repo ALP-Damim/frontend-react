@@ -17,7 +17,7 @@ export default function TeacherMonitor() {
     const lastTsRef = useRef(0);
 
     // 실제 로그인 연동 시 교체
-    const teacherId = 5;
+    const teacherId = 9;
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(teacherId);

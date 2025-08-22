@@ -32,7 +32,7 @@ const DAY_MASKS = {
 
 export default function CourseRegistration() {
     const navigate = useNavigate();
-    const teacherId = 5; // 강사 ID 고정
+    const teacherId = 9; // 강사 ID 고정
     const [teacherProfile, setTeacherProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
     

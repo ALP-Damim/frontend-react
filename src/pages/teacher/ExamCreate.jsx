@@ -78,7 +78,7 @@ export default function ExamCreate() {
     const { classId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const teacherId = 5; // 실제 로그인 사용자 ID로 교체 필요
+    const teacherId = 9; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
     const { sendMessage, connect, disconnect } = useStomp();

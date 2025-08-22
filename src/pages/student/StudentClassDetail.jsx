@@ -13,7 +13,7 @@ const studentNavigationLinks = [
 
 export default function StudentClassDetail() {
     // 실제 로그인 연동 시 교체
-    const studentId = 21;
+    const studentId = 22;
     const { classId } = useParams();
     const navigate = useNavigate();
     

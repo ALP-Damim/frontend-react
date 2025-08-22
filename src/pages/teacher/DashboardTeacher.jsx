@@ -34,7 +34,7 @@ const teacherNavigationLinks = [
 ];
 
 export default function DashboardTeacher() {
-    const teacherId = 5; // 강사 ID 고정
+    const teacherId = 9; // 강사 ID 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
