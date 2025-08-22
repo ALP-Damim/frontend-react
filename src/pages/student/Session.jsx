@@ -234,9 +234,9 @@ export default function Session() {
                 },
                 body: JSON.stringify({
                     examId: exam.id,
-                    studentId: studentId,
-                    startTime: new Date().toISOString(),
-                    status: "in_progress"
+                    userId: studentId,
+                    totalScore: 0,
+                    feedback: ""
                 })
             });
             
@@ -248,7 +248,7 @@ export default function Session() {
             console.log('시험 제출 데이터가 생성되었습니다:', submission);
             
             // 2. examId로 questions 조회
-            const questionsResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${exam.id}/questions`);
+            const questionsResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/exams/${exam.id}/questions`);
             
             if (!questionsResponse.ok) {
                 throw new Error(`Questions 조회 실패: ${questionsResponse.status}`);

@@ -80,6 +80,7 @@ export default function ExamQuestion() {
     const { examId, questionNumber } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const studentId = 22; // 실제 로그인 사용자 ID로 교체 필요
     
     // 실제 데이터 사용
     const [exam, setExam] = useState(null);
@@ -140,16 +141,19 @@ export default function ExamQuestion() {
                 console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
                 
                 // 답안 API 저장
-                const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
+                const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submission-answers', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        submissionId: submission.id,
+                        examId: exam.id,
+                        userId: studentId,
                         questionId: currentQuestion.id,
-                        answer: currentAnswer,
-                        timeSpent: timeSpent
+                        answerText: currentAnswer,
+                        isCorrect: false, // 임시로 false, 나중에 채점 로직에서 수정
+                        score: 0, // 임시로 0, 나중에 채점 로직에서 수정
+                        solvingTime: timeSpent
                     })
                 });
                 
@@ -191,16 +195,19 @@ export default function ExamQuestion() {
             console.log(`마지막 문제 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
             
             // 마지막 답안 API 저장
-            const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
+            const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submission-answers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    submissionId: submission.id,
+                    examId: exam.id,
+                    userId: studentId,
                     questionId: currentQuestion.id,
-                    answer: currentAnswer,
-                    timeSpent: timeSpent
+                    answerText: currentAnswer,
+                    isCorrect: false, // 임시로 false, 나중에 채점 로직에서 수정
+                    score: 0, // 임시로 0, 나중에 채점 로직에서 수정
+                    solvingTime: timeSpent
                 })
             });
             
@@ -209,15 +216,16 @@ export default function ExamQuestion() {
             }
 
             // submission 완료 처리
-            const submissionResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submission.id}`, {
+            const submissionResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submission.examId}/${submission.userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    ...submission,
-                    status: "completed",
-                    endTime: new Date().toISOString()
+                    examId: exam.id,
+                    userId: studentId,
+                    totalScore: totalScore,
+                    feedback: "시험 완료"
                 })
             });
             
