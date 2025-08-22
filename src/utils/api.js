@@ -624,4 +624,76 @@ export const submitAnswer = async (examId, userId, questionId, answerData) => {
     }
 };
 
+// 시험 결과 조회 API (submission 기반)
+export const fetchExamResult = async (examId, userId) => {
+    try {
+        console.log('시험 결과 조회 요청:', {
+            url: `https://team02-apim.azure-api.net/result-service/submissions?examId=${examId}&userId=${userId}`,
+            method: 'GET'
+        });
+        
+        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submissions?examId=${examId}&userId=${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('시험 결과 조회 응답:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('시험 결과 조회 응답 에러:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('시험 결과 조회 성공:', result);
+        return Array.isArray(result) ? result[0] : result; // 첫 번째 결과 반환
+    } catch (error) {
+        console.error('시험 결과 조회 실패:', error);
+        throw error;
+    }
+};
+
+// 답안 상세 조회 API
+export const fetchSubmissionAnswers = async (examId, userId) => {
+    try {
+        console.log('답안 상세 조회 요청:', {
+            url: `https://team02-apim.azure-api.net/result-service/submission-answers?examId=${examId}&userId=${userId}`,
+            method: 'GET'
+        });
+        
+        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submission-answers?examId=${examId}&userId=${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('답안 상세 조회 응답:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('답안 상세 조회 응답 에러:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('답안 상세 조회 성공:', result);
+        return Array.isArray(result) ? result : [];
+    } catch (error) {
+        console.error('답안 상세 조회 실패:', error);
+        throw error;
+    }
+};
+
 
