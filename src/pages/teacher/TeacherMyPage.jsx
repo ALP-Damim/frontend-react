@@ -18,7 +18,7 @@ const teacherTabs = [
 
 export default function TeacherMyPage() {
     // 실제 로그인 연동 시 교체
-    const teacherId = 1;
+    const teacherId = 2;
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(teacherId);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/common';
 import { useStomp } from '../../contexts/StompContext';
@@ -73,16 +73,18 @@ const mockQuestions = [
 export default function Session() {
     const { sessionId } = useParams();
     const navigate = useNavigate();
-    const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 26; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
-    const { isConnected, sendMessage } = useStomp();
+    const { isConnected, sendMessage, subscribeToTopic } = useStomp();
     
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [exam, setExam] = useState(null);
     const [examReady, setExamReady] = useState(false);
     const [checkingExam, setCheckingExam] = useState(false);
+    const subscriptionRef = useRef(null);
+    const isSubscribedRef = useRef(false);
 
     // 시험 상태 확인
     useEffect(() => {
@@ -112,44 +114,150 @@ export default function Session() {
         };
         
         initializeExam();
+        
+        // 브라우저 알림 권한 요청
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
     }, [sessionId]);
 
-    // STOMP를 통한 시험 준비 상태 실시간 감지 (현재는 연결 상태만 확인)
+    // STOMP를 통한 시험 준비 상태 실시간 감지
     useEffect(() => {
-        if (!isConnected || !exam) {
+        if (!isConnected || !sessionId) {
             return;
         }
 
-        console.log('STOMP 연결됨, 시험 준비 상태 감지 준비:', exam.id);
+        // 이미 구독 중이면 중복 구독 방지
+        if (isSubscribedRef.current) {
+            console.log('이미 구독 중입니다. 중복 구독 방지.');
+            return;
+        }
+
+        console.log('🔗 STOMP 연결됨, 세션 구독 시작');
+        console.log(`📋 세션 ID: ${sessionId}`);
+        console.log(`📡 구독 토픽: /topic/session/${sessionId}`);
         
-        // TODO: 실제 STOMP 구독 구현
-        // 현재는 연결 상태만 확인하고, 나중에 실제 구독 로직을 추가할 예정
-        console.log('시험 준비 상태 구독 준비 완료 (실제 구독은 나중에 구현)');
+        // 세션 구독 메시지 전송
+        const subscribeMessage = {
+            sessionId: sessionId,
+            studentId: studentId,
+            action: 'subscribe'
+        };
         
-    }, [isConnected, exam]);
+        console.log('📤 세션 구독 메시지 전송:', subscribeMessage);
+        sendMessage('/app/session/subscribe', subscribeMessage);
+        
+        // 구독 완료 로그
+        console.log('✅ 세션 STOMP 구독 완료');
+        console.log(`🎯 구독 토픽: /topic/session/${sessionId}`);
+        console.log(`👤 학생 ID: ${studentId}`);
+        console.log(`📋 세션 ID: ${sessionId}`);
+        
+        // 시험 준비 상태 변경 감지를 위한 구독 (강사가 시험 작성 완료 시)
+        console.log('🔔 시험 준비 상태 변경 감지 구독 준비');
+        console.log(`📡 시험 준비 토픽: /topic/session/${sessionId}/exam-ready`);
+        
+        // 실제 STOMP 메시지 수신 시 처리할 로직
+        // 강사가 시험 작성 완료 버튼을 누르면 서버에서 메시지를 보내고
+        // 여기서 해당 메시지를 받아서 시험 준비 상태를 업데이트
+        console.log('🎯 실제 STOMP 메시지 대기 중...');
+        
+        // sessionId에 대한 토픽 구독
+        const sessionTopic = `/topic/session/${sessionId}`;
+        const subscription = subscribeToTopic(sessionTopic, (message) => {
+            try {
+                const data = JSON.parse(message.body);
+                console.log('📨 세션 메시지 수신:', data);
+                
+                if (data.type === 'EXAM_READY' || data.examReady) {
+                    console.log('✅ 시험 준비 완료!');
+                    setExamReady(true);
+                    
+                    // 브라우저 알림 표시
+                    if (Notification.permission === 'granted') {
+                        new Notification('시험 준비 완료', {
+                            body: '시험이 준비되었습니다. 시험 시작 버튼을 클릭하세요!',
+                            icon: '/vite.svg',
+                            tag: `exam_ready_${sessionId}`,
+                            requireInteraction: true
+                        });
+                    } else if (Notification.permission !== 'denied') {
+                        // 권한 요청
+                        Notification.requestPermission().then(permission => {
+                            if (permission === 'granted') {
+                                new Notification('시험 준비 완료', {
+                                    body: '시험이 준비되었습니다. 시험 시작 버튼을 클릭하세요!',
+                                    icon: '/vite.svg',
+                                    tag: `exam_ready_${sessionId}`,
+                                    requireInteraction: true
+                                });
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('세션 메시지 파싱 오류:', error);
+            }
+        });
+        
+        // 구독 상태 저장
+        subscriptionRef.current = subscription;
+        isSubscribedRef.current = true;
+        
+        // 컴포넌트 언마운트 시 구독 해제
+        return () => {
+            if (subscriptionRef.current) {
+                subscriptionRef.current.unsubscribe();
+                console.log('📡 세션 구독 해제:', sessionTopic);
+                subscriptionRef.current = null;
+                isSubscribedRef.current = false;
+            }
+        };
+        
+    }, [isConnected, sessionId, studentId]); // sendMessage 제거
 
 
 
     // 시험 시작 핸들러
     const handleExamStart = async () => {
-        if (!exam || !exam.isReady) {
+        if (!exam || !examReady) {
             return;
         }
         
         try {
-            // 하드코딩된 데이터 사용
-            const questions = mockQuestions;
-            const submission = {
-                id: "submission-001",
-                examId: exam.id,
-                studentId: studentId,
-                startTime: new Date().toISOString(),
-                status: "in_progress"
-            };
+            // 1. 빈 submission 생성
+            const submissionResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    examId: exam.id,
+                    studentId: studentId,
+                    startTime: new Date().toISOString(),
+                    status: "in_progress"
+                })
+            });
             
+            if (!submissionResponse.ok) {
+                throw new Error(`Submission 생성 실패: ${submissionResponse.status}`);
+            }
+            
+            const submission = await submissionResponse.json();
             console.log('시험 제출 데이터가 생성되었습니다:', submission);
             
-            // 첫 번째 문제 페이지로 이동
+            // 2. examId로 questions 조회
+            const questionsResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${exam.id}/questions`);
+            
+            if (!questionsResponse.ok) {
+                throw new Error(`Questions 조회 실패: ${questionsResponse.status}`);
+            }
+            
+            const questions = await questionsResponse.json();
+            console.log('시험 문제를 조회했습니다:', questions);
+            
+            // 3. 첫 번째 문제 페이지로 이동
             navigate(`/student/exam/${exam.id}/question/1`, {
                 state: {
                     exam: exam,
@@ -236,7 +344,7 @@ export default function Session() {
                                     </div>
                                 )}
                             </div>
-                        ) : !exam.isReady ? (
+                        ) : !examReady ? (
                             <div>
                                 <p style={{ color: 'var(--muted)', marginBottom: '30px' }}>
                                     시험 준비 중입니다. 강사가 시험을 완료하면 실시간으로 알려드립니다.
@@ -302,16 +410,7 @@ export default function Session() {
                                 >
                                     시험 시작
                                 </button>
-                                <div style={{ 
-                                    marginTop: '16px', 
-                                    padding: '12px', 
-                                    backgroundColor: 'var(--success)', 
-                                    borderRadius: '8px',
-                                    fontSize: '14px',
-                                    color: 'white',
-                                    textAlign: 'center'
-                                }}>
-                                    ✅ 시험 준비 완료! 실시간 알림을 통해 자동으로 활성화되었습니다.
+                                <div >
                                 </div>
                             </div>
                         )}

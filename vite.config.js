@@ -11,28 +11,29 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      proxy: {
-        '/api': {
-          target: apiTarget,
-          changeOrigin: true,
-          secure: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
-          headers: apimKey ? { 'Ocp-Apim-Subscription-Key': apimKey } : undefined,
-        },
-        '/ws': {
-          target: wsTarget,
-          changeOrigin: true,
-          ws: true,
-          secure: true,
-          // 일부 환경에서 WS 업그레이드 시 headers 옵션이 적용되지 않을 수 있어 이벤트로도 주입
-          configure: (proxy) => {
-            proxy.on('proxyReqWs', (proxyReq) => {
-              if (apimKey) proxyReq.setHeader('Ocp-Apim-Subscription-Key', apimKey)
-            })
-          },
-          headers: apimKey ? { 'Ocp-Apim-Subscription-Key': apimKey } : undefined,
-        },
-      },
+      // 프록시 설정 비활성화 (직접 연결 사용)
+      // proxy: {
+      //   '/api': {
+      //     target: apiTarget,
+      //     changeOrigin: true,
+      //     secure: true,
+      //     rewrite: (path) => path.replace(/^\/api/, ''),
+      //     headers: apimKey ? { 'Ocp-Apim-Subscription-Key': apimKey } : undefined,
+      //   },
+      //   '/ws': {
+      //     target: wsTarget,
+      //     changeOrigin: true,
+      //     ws: true,
+      //     secure: true,
+      //     // 일부 환경에서 WS 업그레이드 시 headers 옵션이 적용되지 않을 수 있어 이벤트로도 주입
+      //     configure: (proxy) => {
+      //       proxy.on('proxyReqWs', (proxyReq) => {
+      //         if (apimKey) proxyReq.setHeader('Ocp-Apim-Subscription-Key', apimKey)
+      //       })
+      //     },
+      //     headers: apimKey ? { 'Ocp-Apim-Subscription-Key': apimKey } : undefined,
+      //   },
+      // },
     },
   }
 })

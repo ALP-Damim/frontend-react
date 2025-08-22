@@ -1,9 +1,5 @@
-// API 기본 설정 (개발: Vite 프록시 /api 사용, 운영: 절대 URL)
-const API_BASE_URL = (
-    typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV
-)
-    ? '/api'
-    : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || '/api');
+// API 기본 설정 (개발/운영 환경 모두 실제 서버 사용)
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) || 'https://team02-apim.azure-api.net/student';
 
 // 공통 API 호출 함수
 const apiCall = async (endpoint, options = {}) => {
@@ -346,7 +342,7 @@ export const fetchAttendance = async (studentId, sessionId) => {
 };
 
 // 알림 관련 API 베이스 (환경변수)
-const NOTIFICATION_API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_NOTIFICATION_API_URL) || 'http://localhost:8080/notifications-service-http';
+const NOTIFICATION_API_BASE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_NOTIFICATION_API_URL) || 'https://team02-apim.azure-api.net/notifications-service-http';
 
 // 알림 전송
 export const sendNotification = async (notificationData) => {

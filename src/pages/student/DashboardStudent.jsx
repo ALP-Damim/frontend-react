@@ -5,6 +5,7 @@ import { Header, AlarmStatusIndicator } from "../../components/common";
 import { fetchStudentClasses, formatTimeToMinutes, calculateNextClassTime, isClassEntryAvailable, createAttendance, fetchCurrentSession, findNearestFutureSession } from "../../utils/api";
 import { useUserStomp } from "../../hooks/useUserStomp";
 import { useClassAlarm } from "../../hooks/useClassAlarm";
+import { useStomp } from "../../contexts/StompContext";
 
 // 하드코딩된 데이터 (추천 강의 예시)
 const recommendedCourses = [
@@ -37,7 +38,7 @@ const studentNavigationLinks = [
 
 export default function DashboardStudent() {
     // 실제 적용 시 로그인 유저의 studentId를 사용
-    const studentId = 21; // 임시 고정
+    const studentId = 26; // 임시 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
@@ -46,6 +47,9 @@ export default function DashboardStudent() {
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(studentId);
+    
+    // STOMP 훅 사용
+    const { isConnected, sendMessage, connect } = useStomp();
 
     // 알람 관리
     const { clearAllAlarms } = useClassAlarm(classes, studentId);
@@ -171,6 +175,22 @@ export default function DashboardStudent() {
             await createAttendance(attendanceData);
             console.log('출석이 기록되었습니다:', attendanceData);
             
+            // 세션 ID에 대한 STOMP 구독 설정
+            if (isConnected) {
+                const sessionTopic = `/topic/session/${session.sessionId}`;
+                console.log(`📡 세션 구독 시도: ${sessionTopic}`);
+                
+                // 구독 요청 메시지 전송
+                sendMessage('/app/session/subscribe', {
+                    sessionId: session.sessionId,
+                    studentId: studentId
+                });
+                
+                console.log(`✅ 세션 ${session.sessionId} 구독 완료`);
+            } else {
+                console.log('⚠️ STOMP 연결이 필요합니다.');
+            }
+            
             // 세션 ID를 이용해서 시험 대기 페이지로 이동
             navigate(`/student/session/${session.sessionId}`);
         } catch (error) {
@@ -185,12 +205,12 @@ export default function DashboardStudent() {
         }
     };
 
-    return (
-        <>
-            <Header 
-                navigationLinks={studentNavigationLinks}
-                notifications={[]}
-                onLogout={handleLogoutWithAlarm}
+            return (
+            <>
+                <Header 
+                    navigationLinks={studentNavigationLinks}
+                    notifications={[]}
+                    onLogout={handleLogoutWithAlarm}
                 userType="student"
             />
             <div className="container">
@@ -251,101 +271,7 @@ export default function DashboardStudent() {
                             )}
                         </div>
 
-                        {/* 시험 시작 */}
-                        <div className="card">
-                            <h3 className="section-title">시험</h3>
-                            <div style={{ 
-                                padding: '20px', 
-                                backgroundColor: 'var(--hover)', 
-                                borderRadius: '8px',
-                                textAlign: 'center'
-                            }}>
-                                <h4 style={{ marginBottom: '15px', color: 'var(--accent)' }}>React 기초 시험</h4>
-                                <p style={{ marginBottom: '20px', color: 'var(--muted)' }}>
-                                    React의 기본 개념과 사용법에 대한 시험입니다.<br/>
-                                    총 5문제, 100점 만점, 60분 제한시간
-                                </p>
-                                <button 
-                                    className="btn" 
-                                    style={{ 
-                                        fontSize: '1.1rem', 
-                                        padding: '12px 24px',
-                                        backgroundColor: 'var(--accent)',
-                                        color: 'white'
-                                    }}
-                                    onClick={() => navigate('/student/exam/exam-001/question/1', {
-                                        state: {
-                                            exam: {
-                                                id: "exam-001",
-                                                name: "React 기초 시험",
-                                                description: "React의 기본 개념과 사용법에 대한 시험입니다.",
-                                                duration: 60,
-                                                totalPoints: 100
-                                            },
-                                            questions: [
-                                                {
-                                                    id: "q1",
-                                                    body: "React에서 컴포넌트를 정의하는 방법 중 올바른 것은?",
-                                                    qtype: "MCQ",
-                                                    choices: JSON.stringify([
-                                                        "function MyComponent() { return <div>Hello</div>; }",
-                                                        "class MyComponent { render() { return <div>Hello</div>; } }",
-                                                        "const MyComponent = () => <div>Hello</div>;",
-                                                        "모든 위의 방법들이 올바르다"
-                                                    ]),
-                                                    points: 20,
-                                                    correctAnswer: "모든 위의 방법들이 올바르다"
-                                                },
-                                                {
-                                                    id: "q2",
-                                                    body: "React에서 상태(state)를 관리하는 Hook은?",
-                                                    qtype: "MCQ",
-                                                    choices: JSON.stringify([
-                                                        "useState",
-                                                        "useEffect", 
-                                                        "useContext",
-                                                        "useReducer"
-                                                    ]),
-                                                    points: 20,
-                                                    correctAnswer: "useState"
-                                                },
-                                                {
-                                                    id: "q3",
-                                                    body: "React에서 props의 특징을 설명하세요.",
-                                                    qtype: "SHORT",
-                                                    points: 20,
-                                                    correctAnswer: "읽기 전용이며 부모 컴포넌트에서 자식 컴포넌트로 데이터를 전달하는 방법"
-                                                },
-                                                {
-                                                    id: "q4",
-                                                    body: "React의 Virtual DOM이 실제 DOM보다 빠른 이유를 설명하세요.",
-                                                    qtype: "ESSAY",
-                                                    points: 25,
-                                                    correctAnswer: "Virtual DOM은 메모리상의 가상 표현으로, 실제 DOM 조작을 최소화하여 성능을 향상시킵니다."
-                                                },
-                                                {
-                                                    id: "q5",
-                                                    body: "React에서 조건부 렌더링을 구현하는 방법을 예시와 함께 설명하세요.",
-                                                    qtype: "ESSAY",
-                                                    points: 15,
-                                                    correctAnswer: "삼항 연산자나 && 연산자를 사용하여 조건에 따라 다른 컴포넌트를 렌더링할 수 있습니다."
-                                                }
-                                            ],
-                                            submission: {
-                                                id: "submission-001",
-                                                examId: "exam-001",
-                                                studentId: 21,
-                                                startTime: new Date().toISOString(),
-                                                status: "in_progress"
-                                            },
-                                            currentQuestionIndex: 0
-                                        }
-                                    })}
-                                >
-                                    시험 시작하기
-                                </button>
-                            </div>
-                        </div>
+
 
                         {/* 추천 강의 */}
                         <div className="card">

@@ -3,7 +3,7 @@ import { fetchStudentClasses, fetchClassAttendance } from "../../utils/api";
 
 // 수강 강좌 및 강좌별 출석률을 불러와 UI에 맞게 가공
 const fetchGrades = async () => {
-	const studentId = 21; // TODO: 로그인 사용자 ID로 교체
+	const studentId = 26; // TODO: 로그인 사용자 ID로 교체
 	const classes = await fetchStudentClasses(studentId);
 	// classes가 배열이 아닐 수 있으니 방어코드
 	const classList = Array.isArray(classes) ? classes : [];

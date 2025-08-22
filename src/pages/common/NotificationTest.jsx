@@ -31,10 +31,9 @@ const NotificationTest = () => {
         try {
             addLog('STOMP 연결 시도...', 'info');
             
-            // STOMP 클라이언트 생성
-            const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+            // STOMP 클라이언트 생성 (개발/운영 환경 모두 실제 서버 사용)
             const client = new Client({
-                brokerURL: isDev ? '/ws' : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws'),
+                brokerURL: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws',
                 connectHeaders: {},
                 debug: function (str) {
                     addLog(`STOMP Debug: ${str}`, 'info');
@@ -48,54 +47,22 @@ const NotificationTest = () => {
                 setIsConnected(true);
                 addLog(`STOMP 연결 성공! Frame: ${JSON.stringify(frame)}`, 'success');
                 
-                // 사용자 등록
-                client.publish({
-                    destination: '/app/register',
-                    body: JSON.stringify({ userId: currentUserId })
-                });
+                // 사용자 등록 제거됨
                 
                 // 알림 토픽 구독
                 client.subscribe(`/topic/notifications/${currentUserId}`, (message) => {
                     try {
                         const data = JSON.parse(message.body);
                         
-                        if (data.type === 'NOTIFICATION' || data.message) {
-                            const notification = data.type === 'NOTIFICATION' ? data : {
-                                id: Date.now(),
-                                message: data.message,
-                                senderId: data.senderId || 'system',
-                                type: data.type || 'MESSAGE',
-                                isRead: false,
-                                createdAt: new Date().toISOString()
-                            };
-                            
-                            setNotifications(prev => [notification, ...prev]);
-                            setUnreadCount(prev => prev + 1);
-                            
-                            // 브라우저 알림
-                            if ('Notification' in window && Notification.permission === 'granted') {
-                                new Notification('새 알림', {
-                                    body: notification.message,
-                                    icon: '/vite.svg'
-                                });
-                            }
-                            
-                            addLog(`새 알림: ${notification.message}`, 'notification');
-                        }
+                                                 if (data.type === 'NOTIFICATION' || data.message) {
+                             addLog(`알림 수신 (처리 제거됨): ${data.message}`, 'info');
+                         }
                     } catch (error) {
                         addLog(`메시지 파싱 오류: ${error.message}`, 'error');
                     }
                 });
                 
-                // 등록 응답 구독
-                client.subscribe('/topic/registration', (message) => {
-                    try {
-                        const data = JSON.parse(message.body);
-                        addLog(`등록 완료: ${data.message || '성공'}`, 'success');
-                    } catch (error) {
-                        addLog('등록 응답 파싱 오류', 'error');
-                    }
-                });
+                // 등록 응답 구독 제거됨
                 
                 // 인사 메시지 전송 (연결 테스트)
                 client.publish({
@@ -110,6 +77,18 @@ const NotificationTest = () => {
                         addLog(`서버 응답: ${data.content || '연결 확인됨'}`, 'success');
                     } catch (error) {
                         addLog('인사 응답 파싱 오류', 'error');
+                    }
+                });
+
+                // 브로드캐스트 토픽 구독
+                client.subscribe('/topic/broadcast', (message) => {
+                    try {
+                        const data = JSON.parse(message.body);
+                        addLog(`브로드캐스트 메시지 수신: ${data.message}`, 'notification');
+                        
+                                                 // 브로드캐스트 메시지 처리 제거됨
+                    } catch (error) {
+                        addLog('브로드캐스트 메시지 파싱 오류', 'error');
                     }
                 });
             };
@@ -227,27 +206,12 @@ const NotificationTest = () => {
 
     // 브라우저 알림 권한 요청
     const requestNotificationPermission = async () => {
-        if ('Notification' in window) {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                addLog('브라우저 알림 권한 허용', 'success');
-            } else {
-                addLog('브라우저 알림 권한 거부', 'warning');
-            }
-        }
+        addLog('브라우저 알림 기능이 비활성화되었습니다.', 'info');
     };
 
     // 브라우저 알림 테스트
     const testBrowserNotification = () => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('테스트 알림', {
-                body: '브라우저 알림이 정상적으로 작동합니다!',
-                icon: '/vite.svg'
-            });
-            addLog('브라우저 알림 테스트 완료', 'success');
-        } else {
-            addLog('브라우저 알림 권한 필요', 'warning');
-        }
+        addLog('브라우저 알림 기능이 비활성화되었습니다.', 'info');
     };
 
     // 실시간 테스트
@@ -264,6 +228,130 @@ const NotificationTest = () => {
                 body: JSON.stringify(testMessage)
             });
             addLog('실시간 테스트 메시지 전송', 'info');
+        } else {
+            addLog('STOMP 연결 필요', 'warning');
+        }
+    };
+
+    // 구독 테스트 - 직접 메시지 전송
+    const testSubscription = () => {
+        if (stompClient.current?.connected) {
+            const testMessage = {
+                type: 'SUBSCRIPTION_TEST',
+                message: `구독 테스트 메시지 - ${new Date().toLocaleTimeString()}`,
+                senderId: 'test-system',
+                receiverId: currentUserId,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 직접 토픽에 메시지 전송 (테스트용)
+            stompClient.current.publish({
+                destination: `/topic/notifications/${currentUserId}`,
+                body: JSON.stringify(testMessage)
+            });
+            addLog(`구독 테스트: /topic/notifications/${currentUserId}에 직접 메시지 전송`, 'info');
+        } else {
+            addLog('STOMP 연결 필요', 'warning');
+        }
+    };
+
+    // 구독 테스트 - 다른 사용자에게 메시지 전송
+    const testOtherUserSubscription = () => {
+        if (stompClient.current?.connected && targetUserId) {
+            const testMessage = {
+                type: 'CROSS_USER_TEST',
+                message: `다른 사용자 테스트 - ${new Date().toLocaleTimeString()}`,
+                senderId: currentUserId,
+                receiverId: targetUserId,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 대상 사용자의 토픽에 메시지 전송
+            stompClient.current.publish({
+                destination: `/topic/notifications/${targetUserId}`,
+                body: JSON.stringify(testMessage)
+            });
+            addLog(`다른 사용자 구독 테스트: /topic/notifications/${targetUserId}에 메시지 전송`, 'info');
+        } else {
+            addLog('STOMP 연결 또는 대상 사용자 ID 필요', 'warning');
+        }
+    };
+
+    // 학생 테스트 알림 전송
+    const testStudentNotification = () => {
+        if (stompClient.current?.connected) {
+            const studentTestMessage = {
+                type: 'STUDENT_NOTIFICATION',
+                message: `학생 테스트 알림 - ${new Date().toLocaleTimeString()}`,
+                senderId: 'teacher-system',
+                receiverId: '21', // 학생 ID 21
+                timestamp: new Date().toISOString()
+            };
+            
+            // 학생 ID 21에게 메시지 전송
+            stompClient.current.publish({
+                destination: '/topic/notifications/21',
+                body: JSON.stringify(studentTestMessage)
+            });
+            addLog('학생 테스트 알림 전송: /topic/notifications/21에 메시지 전송', 'info');
+        } else {
+            addLog('STOMP 연결 필요', 'warning');
+        }
+    };
+
+    // 세션 테스트 - 시험 준비 완료 알림
+    const testSessionExamReady = () => {
+        if (stompClient.current?.connected) {
+            const examReadyMessage = {
+                type: 'EXAM_READY',
+                examReady: true,
+                sessionId: '123', // 테스트 세션 ID
+                message: '시험이 준비되었습니다.',
+                timestamp: new Date().toISOString()
+            };
+            
+            // 세션 ID 123에 시험 준비 완료 메시지 전송
+            stompClient.current.publish({
+                destination: '/topic/session/123',
+                body: JSON.stringify(examReadyMessage)
+            });
+            addLog('세션 시험 준비 완료 테스트: /topic/session/123에 메시지 전송', 'info');
+        } else {
+            addLog('STOMP 연결 필요', 'warning');
+        }
+    };
+
+    // 구독 테스트 - 브로드캐스트 메시지
+    const testBroadcastSubscription = () => {
+        if (stompClient.current?.connected) {
+            const broadcastMessage = {
+                type: 'BROADCAST_TEST',
+                message: `브로드캐스트 테스트 - ${new Date().toLocaleTimeString()}`,
+                senderId: 'broadcast-system',
+                timestamp: new Date().toISOString()
+            };
+            
+            // 브로드캐스트 토픽에 메시지 전송
+            stompClient.current.publish({
+                destination: '/topic/broadcast',
+                body: JSON.stringify(broadcastMessage)
+            });
+            addLog('브로드캐스트 구독 테스트: /topic/broadcast에 메시지 전송', 'info');
+        } else {
+            addLog('STOMP 연결 필요', 'warning');
+        }
+    };
+
+    // 구독 상태 확인
+    const checkSubscriptionStatus = () => {
+        if (stompClient.current?.connected) {
+            const subscriptions = stompClient.current.subscriptions;
+            const subscriptionCount = Object.keys(subscriptions).length;
+            addLog(`현재 구독 중인 토픽 수: ${subscriptionCount}`, 'info');
+            
+            Object.keys(subscriptions).forEach(topic => {
+                addLog(`구독 토픽: ${topic}`, 'info');
+            });
         } else {
             addLog('STOMP 연결 필요', 'warning');
         }
@@ -292,7 +380,7 @@ const NotificationTest = () => {
                         </span>
                         {stompClient.current && (
                             <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '4px' }}>
-                                URL: {(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ? '/ws' : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws')}
+                                URL: {(typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws'}
                             </div>
                         )}
                     </div>
@@ -377,7 +465,7 @@ const NotificationTest = () => {
             {/* 알림 관리 */}
             <div className="card" style={{ marginBottom: '20px' }}>
                 <h3>알림 관리</h3>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                     <button className="btn" onClick={handleFetchNotifications}>
                         목록 새로고침
                     </button>
@@ -390,6 +478,31 @@ const NotificationTest = () => {
                     <button className="btn btn-outline" onClick={testRealTime}>
                         실시간 테스트
                     </button>
+                </div>
+                
+                {/* 구독 테스트 섹션 */}
+                <div style={{ marginBottom: '16px' }}>
+                    <h4 style={{ marginBottom: '8px', color: 'var(--primary)' }}>구독 테스트</h4>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button className="btn btn-sm" onClick={testSubscription}>
+                            직접 구독 테스트
+                        </button>
+                        <button className="btn btn-sm" onClick={testOtherUserSubscription}>
+                            다른 사용자 테스트
+                        </button>
+                        <button className="btn btn-sm" onClick={testBroadcastSubscription}>
+                            브로드캐스트 테스트
+                        </button>
+                        <button className="btn btn-sm btn-primary" onClick={testStudentNotification}>
+                            학생 테스트
+                        </button>
+                        <button className="btn btn-sm btn-success" onClick={testSessionExamReady}>
+                            세션 테스트
+                        </button>
+                        <button className="btn btn-sm btn-outline" onClick={checkSubscriptionStatus}>
+                            구독 상태 확인
+                        </button>
+                    </div>
                 </div>
 
                 {/* 알림 목록 */}

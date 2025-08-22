@@ -40,10 +40,10 @@ export const StompProvider = ({ children }) => {
     };
 
     // STOMP 연결
-    const connect = (userId) => {
+    const connect = async (userId) => {
         if (isConnected && currentUserId === userId) {
             addLog('이미 연결되어 있습니다.', 'info');
-            return;
+            return Promise.resolve();
         }
 
         // 기존 연결이 있다면 해제
@@ -51,78 +51,61 @@ export const StompProvider = ({ children }) => {
             disconnect();
         }
 
-        try {
-            addLog(`STOMP 연결 시도... (사용자: ${userId})`, 'info');
-            
-            const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
-            const devWsUrl = (() => {
-                const base = '/ws';
-                const key = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_KEY) || '';
-                const param = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APIM_SUBSCRIPTION_QUERY_NAME) || 'subscription-key';
-                if (!key) return base;
-                return `${base}?${encodeURIComponent(param)}=${encodeURIComponent(key)}`;
-            })();
-            const client = new Client({
-                brokerURL: isDev ? devWsUrl : ((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws'),
-                connectHeaders: {},
-                debug: function (str) {
-                    addLog(`STOMP Debug: ${str}`, 'info');
-                },
-                reconnectDelay: 5000,
-                heartbeatIncoming: 4000,
-                heartbeatOutgoing: 4000
-            });
+        return new Promise((resolve, reject) => {
+            try {
+                addLog(`STOMP 연결 시도... (사용자: ${userId})`, 'info');
+                
+                const isDev = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV;
+                
+                // 웹소켓 URL 설정 (개발/운영 환경 모두 실제 서버 사용)
+                const wsUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WEBSOCKET_URL) || 'wss://team02-apim.azure-api.net/ws';
+                console.log('🌐 WebSocket URL 설정:', wsUrl);
+                console.log('🔧 개발 환경:', isDev);
+                
+                const client = new Client({
+                    brokerURL: wsUrl,
+                    connectHeaders: {},
+                    debug: function (str) {
+                        addLog(`STOMP Debug: ${str}`, 'info');
+                    },
+                    reconnectDelay: 5000,
+                    heartbeatIncoming: 4000,
+                    heartbeatOutgoing: 4000,
+                    connectionTimeout: 10000 // 10초 타임아웃 추가
+                });
             
             client.onConnect = (frame) => {
                 setIsConnected(true);
                 setCurrentUserId(userId);
                 addLog(`STOMP 연결 성공! (사용자: ${userId})`, 'success');
+                resolve(); // Promise 해결
                 
-                // 사용자 등록
-                client.publish({
-                    destination: '/app/register',
-                    body: JSON.stringify({ userId: userId })
-                });
+                // 사용자 등록 제거됨
                 
-                // 알림 토픽 구독
-                client.subscribe(`/topic/notifications/${userId}`, (message) => {
-                    try {
-                        const data = JSON.parse(message.body);
-                        addLog(`새 알림 수신: ${data.message || '알림'}`, 'notification');
-                        
-                        // 브라우저 알림
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                            new Notification('새 알림', {
-                                body: data.message || '새로운 알림이 도착했습니다.',
-                                icon: '/vite.svg'
-                            });
-                        }
-                    } catch (error) {
-                        addLog(`메시지 파싱 오류: ${error.message}`, 'error');
-                    }
-                });
+                // 알림 토픽 구독 제거됨 - 세션 페이지에서만 구독
+
+                // 브로드캐스트 토픽 구독 제거됨 - 세션 페이지에서만 구독
+
+                // 세션 토픽 구독 (동적으로 처리)
+                // 세션 페이지에서 구독 요청 시 처리
+                // 실제로는 세션 페이지에서 sessionId를 받아서 구독해야 함
+                // 여기서는 기본 구독만 설정하고, 세션 페이지에서 추가 구독을 처리
                 
-                // 등록 응답 구독
-                client.subscribe('/topic/registration', (message) => {
-                    try {
-                        const data = JSON.parse(message.body);
-                        addLog(`등록 완료: ${data.message || '성공'}`, 'success');
-                    } catch (error) {
-                        addLog('등록 응답 파싱 오류', 'error');
-                    }
-                });
+                // 등록 응답 구독 제거됨
             };
             
             client.onStompError = (frame) => {
                 addLog(`STOMP 오류: ${JSON.stringify(frame)}`, 'error');
                 setIsConnected(false);
                 setCurrentUserId(null);
+                reject(new Error(`STOMP 오류: ${JSON.stringify(frame)}`));
             };
             
             client.onWebSocketError = (error) => {
                 addLog(`WebSocket 오류: ${error}`, 'error');
                 setIsConnected(false);
                 setCurrentUserId(null);
+                reject(new Error(`WebSocket 오류: ${error}`));
             };
             
             client.onWebSocketClose = (event) => {
@@ -134,9 +117,14 @@ export const StompProvider = ({ children }) => {
             client.activate();
             stompClient.current = client;
             
+            // 전역에서 접근할 수 있도록 window 객체에 저장
+            window.stompClient = client;
+            
         } catch (error) {
             addLog(`연결 오류: ${error.message}`, 'error');
+            reject(error);
         }
+        });
     };
 
     // STOMP 연결 해제
@@ -157,9 +145,26 @@ export const StompProvider = ({ children }) => {
                 destination: destination,
                 body: JSON.stringify(body)
             });
+            console.log('📤 메시지 전송:', destination);
+            console.log('📄 메시지 내용:', body);
             addLog(`메시지 전송: ${destination}`, 'info');
         } else {
+            console.log('⚠️ STOMP 연결이 필요합니다.');
             addLog('STOMP 연결이 필요합니다.', 'warning');
+        }
+    };
+
+    // 동적 토픽 구독
+    const subscribeToTopic = (topic, callback) => {
+        if (stompClient.current?.connected) {
+            const subscription = stompClient.current.subscribe(topic, callback);
+            console.log(`📡 토픽 구독: ${topic}`);
+            addLog(`토픽 구독: ${topic}`, 'info');
+            return subscription;
+        } else {
+            console.log('⚠️ STOMP 연결이 필요합니다.');
+            addLog('STOMP 연결이 필요합니다.', 'warning');
+            return null;
         }
     };
 
@@ -177,6 +182,7 @@ export const StompProvider = ({ children }) => {
         connect,
         disconnect,
         sendMessage,
+        subscribeToTopic,
         addLog
     };
 

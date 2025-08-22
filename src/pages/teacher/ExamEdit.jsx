@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
 import { fetchExamBySessionId } from '../../utils/api';
+import { useStomp } from '../../contexts/StompContext';
 
 // 문제 목록 조회 API
 const fetchQuestionsByExamId = async (examId) => {
@@ -29,7 +30,10 @@ export default function ExamEdit() {
     const { examId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const teacherId = 1; // 실제 로그인 사용자 ID로 교체 필요
+    const teacherId = 2; // 실제 로그인 사용자 ID로 교체 필요
+    
+    // STOMP 훅 사용
+    const { sendMessage, connect, disconnect } = useStomp();
     
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -82,12 +86,62 @@ export default function ExamEdit() {
         initializeExam();
     }, [examId, sessionId]);
 
+
+
     // 시험 데이터 변경 핸들러
     const handleExamDataChange = (field, value) => {
         setExamData(prev => ({
             ...prev,
             [field]: value
         }));
+    };
+
+    // 시험 준비 완료 알림 전송 (필요할 때만 연결)
+    const handleExamReadyNotification = async () => {
+        try {
+            console.log('🔗 시험 준비 알림을 위한 STOMP 연결...');
+            await connect(teacherId);
+            
+            console.log(`📤 시험 준비 완료 알림 전송: 세션 ${sessionId}`);
+            sendMessage(`/topic/session/${sessionId}`, {
+                type: 'EXAM_READY',
+                sessionId: sessionId,
+                examId: exam?.id || examId,
+                message: '시험이 준비되었습니다.',
+                timestamp: new Date().toISOString()
+            });
+            
+            console.log('✅ 시험 준비 완료 알림 전송 완료');
+        } catch (error) {
+            console.error('STOMP 연결 실패, API를 통한 알림 전송 시도:', error);
+            
+            // STOMP 연결 실패 시 API를 통한 대체 알림 전송
+            try {
+                const response = await fetch('https://team02-apim.azure-api.net/notification/api/notifications/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        type: 'EXAM_READY',
+                        message: '시험이 준비되었습니다.',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('✅ API를 통한 시험 준비 알림 전송 완료');
+                } else {
+                    console.error('API 알림 전송 실패:', response.status);
+                }
+            } catch (apiError) {
+                console.error('API 알림 전송 실패:', apiError);
+            }
+        } finally {
+            console.log('🔌 STOMP 연결 해제...');
+            disconnect();
+        }
     };
 
     // 문제 추가
@@ -128,7 +182,7 @@ export default function ExamEdit() {
         }));
     };
 
-    // 시험 저장
+    // 시험 저장 (임시 저장)
     const handleSaveExam = async () => {
         if (!examData.name.trim()) {
             setError("시험 이름을 입력해주세요.");
@@ -163,18 +217,74 @@ export default function ExamEdit() {
         setSaving(true);
         try {
             // TODO: 시험 수정 API 호출
-            console.log('시험 수정:', {
+            console.log('시험 임시 저장:', {
                 examId: exam.id,
                 sessionId: sessionId,
                 examData,
                 questions
             });
 
-            // 저장 성공 후 목록으로 이동
+            // 임시 저장 성공 메시지
+            alert('시험이 임시 저장되었습니다.');
+        } catch (error) {
+            console.error('시험 임시 저장 실패:', error);
+            setError('시험 임시 저장에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // 최종 수정 (시험 준비 완료)
+    const handleFinalSubmit = async () => {
+        if (!examData.name.trim()) {
+            setError("시험 이름을 입력해주세요.");
+            return;
+        }
+
+        if (questions.length === 0) {
+            setError("최소 하나의 문제를 추가해주세요.");
+            return;
+        }
+
+        // 문제 유효성 검사
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+            if (!q.body.trim()) {
+                setError(`${i + 1}번 문제의 내용을 입력해주세요.`);
+                return;
+            }
+            if (q.qtype === 'MCQ') {
+                const choices = JSON.parse(q.choices || '[]');
+                if (choices.some(choice => !choice.trim())) {
+                    setError(`${i + 1}번 문제의 모든 선택지를 입력해주세요.`);
+                    return;
+                }
+            }
+            if (!q.answerKey.trim()) {
+                setError(`${i + 1}번 문제의 정답을 입력해주세요.`);
+                return;
+            }
+        }
+
+        setSaving(true);
+        try {
+            // TODO: 시험 수정 API 호출 (최종 제출)
+            console.log('시험 최종 제출:', {
+                examId: exam.id,
+                sessionId: sessionId,
+                examData: { ...examData, isReady: true },
+                questions
+            });
+
+            // 3. 세션에 시험 준비 완료 알림 전송
+            await handleExamReadyNotification();
+
+            // 4. 최종 제출 성공 후 목록으로 이동
+            alert('시험이 최종 제출되었습니다. 학생들에게 알림이 전송되었습니다.');
             navigate(`/teacher/class/${classId}`);
         } catch (error) {
-            console.error('시험 수정 실패:', error);
-            setError('시험 수정에 실패했습니다. 다시 시도해주세요.');
+            console.error('시험 최종 제출 실패:', error);
+            setError('시험 최종 제출에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setSaving(false);
         }
@@ -276,15 +386,7 @@ export default function ExamEdit() {
                                     </select>
                                 </div>
 
-                                <div>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={examData.isReady}
-                                            onChange={(e) => handleExamDataChange('isReady', e.target.checked)}
-                                        />
-                                        <span style={{ fontWeight: 'bold' }}>시험 준비 완료 (학생들이 응시할 수 있음)</span>
-                                    </label>
+                                <div >
                                 </div>
                             </div>
                         </div>
@@ -455,9 +557,17 @@ export default function ExamEdit() {
                                 className="btn"
                                 onClick={handleSaveExam}
                                 disabled={saving}
+                                style={{ backgroundColor: 'var(--muted)', color: 'white' }}
+                            >
+                                {saving ? '저장 중...' : '임시 저장'}
+                            </button>
+                            <button
+                                className="btn"
+                                onClick={handleFinalSubmit}
+                                disabled={saving}
                                 style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                             >
-                                {saving ? '저장 중...' : '수정'}
+                                {saving ? '제출 중...' : '최종 수정'}
                             </button>
                         </div>
                     </div>

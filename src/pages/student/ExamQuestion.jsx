@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Header } from '../../components/common';
 
@@ -81,14 +81,39 @@ export default function ExamQuestion() {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // 하드코딩된 데이터 사용
-    const [exam] = useState(mockExam);
-    const [questions] = useState(mockQuestions);
-    const [submission] = useState(mockSubmission);
+    // 실제 데이터 사용
+    const [exam, setExam] = useState(null);
+    const [questions, setQuestions] = useState([]);
+    const [submission, setSubmission] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(parseInt(questionNumber) - 1);
     const [answers, setAnswers] = useState({});
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [questionStartTime, setQuestionStartTime] = useState(null);
+    const questionStartTimeRef = useRef(null);
+
+    // 데이터 초기화
+    useEffect(() => {
+        if (location.state) {
+            setExam(location.state.exam);
+            setQuestions(location.state.questions);
+            setSubmission(location.state.submission);
+            setCurrentQuestionIndex(location.state.currentQuestionIndex || 0);
+            setLoading(false);
+        } else {
+            setError("시험 데이터를 찾을 수 없습니다.");
+            setLoading(false);
+        }
+    }, [location.state]);
+
+    // 문제 시작 시간 기록
+    useEffect(() => {
+        if (currentQuestionIndex >= 0 && questions.length > 0) {
+            const startTime = new Date();
+            setQuestionStartTime(startTime);
+            questionStartTimeRef.current = startTime;
+        }
+    }, [currentQuestionIndex, questions.length]);
 
     const currentQuestion = questions[currentQuestionIndex];
     const totalQuestions = questions.length;
@@ -107,13 +132,42 @@ export default function ExamQuestion() {
     const handleNextQuestion = async () => {
         if (!isLastQuestion) {
             try {
-                // 현재 답안 저장 (실제 API 호출 대신 로컬 상태만 업데이트)
-                console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, answers[currentQuestionIndex]);
+                // 현재 답안 저장 (API 호출)
+                const currentAnswer = answers[currentQuestionIndex];
+                const endTime = new Date();
+                const timeSpent = Math.floor((endTime - questionStartTimeRef.current) / 1000); // 초 단위
                 
-                // 다음 문제로 이동
+                console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
+                
+                // 답안 API 저장
+                const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        submissionId: submission.id,
+                        questionId: currentQuestion.id,
+                        answer: currentAnswer,
+                        timeSpent: timeSpent
+                    })
+                });
+                
+                if (!answerResponse.ok) {
+                    throw new Error(`답안 저장 실패: ${answerResponse.status}`);
+                }
+                
+                // 다음 문제로 이동 (되돌리기 불가)
                 const nextIndex = currentQuestionIndex + 1;
-                setCurrentQuestionIndex(nextIndex);
-                navigate(`/student/exam/${examId}/question/${nextIndex + 1}`);
+                navigate(`/student/exam/${examId}/question/${nextIndex + 1}`, {
+                    state: {
+                        exam,
+                        questions,
+                        submission,
+                        currentQuestionIndex: nextIndex,
+                        answers: { ...answers, [currentQuestionIndex]: currentAnswer }
+                    }
+                });
             } catch (error) {
                 console.error('답안 저장 실패:', error);
                 setError('답안 저장에 실패했습니다. 다시 시도해주세요.');
@@ -130,7 +184,47 @@ export default function ExamQuestion() {
         setLoading(true);
         try {
             // 마지막 문제 답안 저장
-            console.log(`마지막 문제 답안 저장:`, answers[currentQuestionIndex]);
+            const currentAnswer = answers[currentQuestionIndex];
+            const endTime = new Date();
+            const timeSpent = Math.floor((endTime - questionStartTimeRef.current) / 1000); // 초 단위
+            
+            console.log(`마지막 문제 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
+            
+            // 마지막 답안 API 저장
+            const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions/answers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    submissionId: submission.id,
+                    questionId: currentQuestion.id,
+                    answer: currentAnswer,
+                    timeSpent: timeSpent
+                })
+            });
+            
+            if (!answerResponse.ok) {
+                throw new Error(`답안 저장 실패: ${answerResponse.status}`);
+            }
+
+            // submission 완료 처리
+            const submissionResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submission.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...submission,
+                    status: "completed",
+                    endTime: new Date().toISOString()
+                })
+            });
+            
+            if (!submissionResponse.ok) {
+                throw new Error(`Submission 완료 처리 실패: ${submissionResponse.status}`);
+            }
+
             console.log('모든 답안 제출 완료');
 
             // 결과 계산
@@ -161,7 +255,7 @@ export default function ExamQuestion() {
             const totalScore = results.reduce((sum, result) => sum + result.score, 0);
             const maxScore = questions.reduce((sum, question) => sum + question.points, 0);
 
-            // 3. 결과 페이지로 이동
+            // 결과 페이지로 이동
             navigate(`/student/exam/${examId}/result`, {
                 state: {
                     exam,
@@ -180,6 +274,44 @@ export default function ExamQuestion() {
             setLoading(false);
         }
     };
+
+    if (loading) {
+        return (
+            <>
+                <Header 
+                    navigationLinks={studentNavigationLinks}
+                    notifications={[]}
+                    userType="student"
+                />
+                <div className="container">
+                    <div className="card">
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                            <div style={{ color: 'var(--muted)' }}>시험 정보를 불러오는 중...</div>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (error) {
+        return (
+            <>
+                <Header 
+                    navigationLinks={studentNavigationLinks}
+                    notifications={[]}
+                    userType="student"
+                />
+                <div className="container">
+                    <div className="card" style={{ borderColor: 'var(--warn)' }}>
+                        <div style={{ color: 'var(--warn)', textAlign: 'center', padding: '40px' }}>
+                            {error}
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     if (!currentQuestion) {
         return (
@@ -326,8 +458,10 @@ export default function ExamQuestion() {
                             <button
                                 className="btn"
                                 onClick={handleNextQuestion}
+                                disabled={loading}
+                                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                             >
-                                다음 문제 →
+                                {loading ? '저장 중...' : '다음 문제 →'}
                             </button>
                         ) : (
                             <button

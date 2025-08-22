@@ -34,7 +34,7 @@ const teacherNavigationLinks = [
 ];
 
 export default function DashboardTeacher() {
-    const teacherId = 1; // 강사 ID 고정
+    const teacherId = 2; // 강사 ID 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
@@ -66,6 +66,8 @@ export default function DashboardTeacher() {
         };
         load();
     }, [teacherId]);
+
+
 
     // 제일 빨리 시작하는 강의 1개
     const nextClass = useMemo(() => {
