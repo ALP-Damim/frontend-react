@@ -696,4 +696,94 @@ export const fetchSubmissionAnswers = async (examId, userId) => {
     }
 };
 
+// 학생의 모든 시험 성적 조회 API
+export const fetchStudentExamGrades = async (studentId) => {
+    try {
+        // 1. 학생이 수강 중인 강의 목록 조회
+        const classes = await fetchStudentClasses(studentId);
+        const classList = Array.isArray(classes) ? classes : [];
+        
+        // 2. 각 강의별 시험 정보 조회
+        const examPromises = classList.map(async (classInfo) => {
+            try {
+                // 강의의 세션 목록 조회
+                const sessions = await fetchClassSessions(classInfo.classId);
+                const sessionList = Array.isArray(sessions) ? sessions : [];
+                
+                // 각 세션별 시험 정보 조회
+                const sessionExamPromises = sessionList.map(async (session) => {
+                    try {
+                        const exam = await fetchExamBySessionId(session.sessionId);
+                        if (!exam) return null;
+                        
+                        // 시험 결과 조회
+                        const examResult = await fetchExamResult(exam.id, studentId);
+                        if (!examResult) return null;
+                        
+                        // 답안 상세 조회
+                        const submissionAnswers = await fetchSubmissionAnswers(exam.id, studentId);
+                        
+                        return {
+                            examId: exam.id,
+                            examName: exam.name,
+                            sessionId: session.sessionId,
+                            sessionDate: session.onDate,
+                            totalScore: examResult.totalScore || 0,
+                            maxScore: exam.totalPoints || 100,
+                            accuracy: submissionAnswers.length > 0 ? 
+                                Math.round((submissionAnswers.filter(a => a.isCorrect === true || a.isCorrect === "true" || a.isCorrect === 1).length / submissionAnswers.length) * 100) : 0,
+                            submissionAnswers
+                        };
+                    } catch (error) {
+                        console.error(`세션 ${session.sessionId} 시험 성적 조회 실패:`, error);
+                        return null;
+                    }
+                });
+                
+                const sessionExams = await Promise.all(sessionExamPromises);
+                const validExams = sessionExams.filter(exam => exam !== null);
+                
+                return {
+                    classId: classInfo.classId,
+                    className: classInfo.className,
+                    teacherName: classInfo.teacherName,
+                    exams: validExams
+                };
+            } catch (error) {
+                console.error(`강의 ${classInfo.classId} 시험 성적 조회 실패:`, error);
+                return {
+                    classId: classInfo.classId,
+                    className: classInfo.className,
+                    teacherName: classInfo.teacherName,
+                    exams: []
+                };
+            }
+        });
+        
+        const classExamResults = await Promise.all(examPromises);
+        
+        // 3. 전체 통계 계산
+        const allExams = classExamResults.flatMap(classResult => classResult.exams);
+        const totalExams = allExams.length;
+        const totalScore = allExams.reduce((sum, exam) => sum + exam.totalScore, 0);
+        const totalMaxScore = allExams.reduce((sum, exam) => sum + exam.maxScore, 0);
+        const averageScore = totalMaxScore > 0 ? Math.round((totalScore / totalMaxScore) * 100) : 0;
+        const averageAccuracy = totalExams > 0 ? Math.round(allExams.reduce((sum, exam) => sum + exam.accuracy, 0) / totalExams) : 0;
+        
+        return {
+            classes: classExamResults,
+            overallStats: {
+                totalExams,
+                averageScore,
+                averageAccuracy,
+                totalScore,
+                totalMaxScore
+            }
+        };
+    } catch (error) {
+        console.error('학생 시험 성적 조회 실패:', error);
+        throw error;
+    }
+};
+
 
