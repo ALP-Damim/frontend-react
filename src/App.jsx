@@ -8,6 +8,7 @@ import { DashboardTeacher, TeacherMonitor, CourseRegistration, TeacherMyPage } f
 import ExamCreate from "./pages/teacher/ExamCreate.jsx";
 import ExamEdit from "./pages/teacher/ExamEdit.jsx";
 import ClassManagement from "./pages/teacher/ClassManagement.jsx";
+import SessionStatistics from "./pages/teacher/SessionStatistics.jsx";
 import { RAG, NotificationLog, NotificationTest } from "./pages/common";
 import { StompProvider } from "./contexts/StompContext";
 
@@ -50,6 +51,7 @@ export default function App() {
                 <Route path="/course-application" element={<CourseApplication />} />
                                  <Route path="/teacher" element={<DashboardTeacher />} />
                  <Route path="/teacher/class/:classId" element={<ClassManagement />} />
+                 <Route path="/teacher/class/:classId/session/:sessionId/statistics" element={<SessionStatistics />} />
                  <Route path="/teacher/exam/create/:classId" element={<ExamCreate />} />
                  <Route path="/teacher/exam/edit/:examId" element={<ExamEdit />} />
                 <Route path="/course-registration" element={<CourseRegistration />} />

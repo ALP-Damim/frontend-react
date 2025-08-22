@@ -110,7 +110,11 @@ export default function ClassManagement() {
                         시험 입장
                     </button>
                 )}
-                <button className="btn btn-outline" style={{ fontSize: '12px' }}>
+                <button 
+                    className="btn btn-outline" 
+                    style={{ fontSize: '12px' }}
+                    onClick={() => window.location.href = `/teacher/class/${classId}/session/${session.sessionId}/statistics`}
+                >
                     통계 보기
                 </button>
             </div>
