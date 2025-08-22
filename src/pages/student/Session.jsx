@@ -74,7 +74,7 @@ const mockQuestions = [
 export default function Session() {
     const { sessionId } = useParams();
     const navigate = useNavigate();
-    const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
     const { isConnected, sendMessage, subscribeToTopic } = useStomp();

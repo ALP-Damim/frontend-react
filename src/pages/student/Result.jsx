@@ -22,7 +22,7 @@ export default function Result() {
     const [questions, setQuestions] = useState([]);
     const [exam, setExam] = useState(null);
     
-    const studentId = 27; // 실제 로그인 사용자 ID로 교체 필요
+    const studentId = 21; // 실제 로그인 사용자 ID로 교체 필요
 
     useEffect(() => {
         const loadExamResult = async () => {

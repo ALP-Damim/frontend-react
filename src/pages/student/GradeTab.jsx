@@ -3,7 +3,7 @@ import { fetchStudentClasses, fetchClassAttendance, fetchStudentExamGrades } fro
 
 // 수강 강좌 및 강좌별 출석률과 시험 성적을 불러와 UI에 맞게 가공
 const fetchGrades = async () => {
-	const studentId = 27; // TODO: 로그인 사용자 ID로 교체
+	const studentId = 21; // TODO: 로그인 사용자 ID로 교체
 	
 	// 출석률 데이터 조회
 	const classes = await fetchStudentClasses(studentId);

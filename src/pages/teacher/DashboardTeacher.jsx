@@ -34,10 +34,11 @@ const teacherNavigationLinks = [
 ];
 
 export default function DashboardTeacher() {
-    const teacherId = 4; // 강사 ID 고정
+    const teacherId = 5; // 강사 ID 고정
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [classes, setClasses] = useState([]);
+    const [examStatus, setExamStatus] = useState({}); // 각 강의의 시험 상태 저장
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(teacherId);
@@ -57,7 +58,35 @@ export default function DashboardTeacher() {
                 setLoading(true);
                 setError(null);
                 const data = await fetchAllClasses({ teacherId });
-                setClasses(Array.isArray(data) ? data : []);
+                const classesData = Array.isArray(data) ? data : [];
+                setClasses(classesData);
+                
+                // 각 강의의 시험 상태 확인
+                const statusMap = {};
+                for (const classData of classesData) {
+                    try {
+                        const nearestSession = await findNearestFutureSession(classData.classId);
+                        if (nearestSession) {
+                            const exam = await fetchExamBySessionId(nearestSession.sessionId);
+                            statusMap[classData.classId] = {
+                                hasExam: !!exam,
+                                isReady: exam?.isReady || false
+                            };
+                        } else {
+                            statusMap[classData.classId] = {
+                                hasExam: false,
+                                isReady: false
+                            };
+                        }
+                    } catch (error) {
+                        console.log(`강의 ${classData.classId} 시험 상태 확인 실패:`, error);
+                        statusMap[classData.classId] = {
+                            hasExam: false,
+                            isReady: false
+                        };
+                    }
+                }
+                setExamStatus(statusMap);
             } catch (e) {
                 setError("강의 목록을 불러오지 못했습니다.");
             } finally {
@@ -224,8 +253,9 @@ export default function DashboardTeacher() {
                                              className="btn" 
                                              onClick={() => handleExamCreate(nextClass)}
                                              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                                             disabled={examStatus[nextClass.classId]?.isReady}
                                          >
-                                             시험 작성
+                                             {examStatus[nextClass.classId]?.isReady ? "시험 작성 완료" : "시험 작성"}
                                          </button>
                                      </div>
                                 </div>
@@ -249,18 +279,26 @@ export default function DashboardTeacher() {
                                             <div className="course-info" style={{ marginBottom: '16px' }}>
                                                 {course.teacherName} · {course.heldDaysString} · {formatTimeToMinutes(course.startsAt)}~{formatTimeToMinutes(course.endsAt)}
                                             </div>
-                                                                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                                 <button 
-                                                     className="btn"
-                                                     onClick={() => handleZoomEntry(course.zoomUrl)}
-                                                     disabled={!isZoomEntryAvailable(course)}
-                                                 >
-                                                     Zoom 입장
-                                                 </button>
-                                                 <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
-                                                     관리
-                                                 </Link>
-                                             </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button 
+                                                    className="btn"
+                                                    onClick={() => handleZoomEntry(course.zoomUrl)}
+                                                    disabled={!isZoomEntryAvailable(course)}
+                                                >
+                                                    Zoom 입장
+                                                </button>
+                                                <button 
+                                                    className="btn" 
+                                                    onClick={() => handleExamCreate(course)}
+                                                    style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                                                    disabled={examStatus[course.classId]?.isReady}
+                                                >
+                                                    {examStatus[course.classId]?.isReady ? "시험 작성 완료" : "시험 작성"}
+                                                </button>
+                                                <Link className="btn btn-outline" to={`/teacher/class/${course.classId}`}>
+                                                    관리
+                                                </Link>
+                                            </div>
                                         </div>
                                     )) : (
                                         <div style={{ color: 'var(--muted)' }}>진행 중인 강의가 없습니다</div>

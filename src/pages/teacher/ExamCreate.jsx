@@ -78,7 +78,7 @@ export default function ExamCreate() {
     const { classId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const teacherId = 4; // 실제 로그인 사용자 ID로 교체 필요
+    const teacherId = 5; // 실제 로그인 사용자 ID로 교체 필요
     
     // STOMP 훅 사용
     const { sendMessage, connect, disconnect } = useStomp();
@@ -618,18 +618,37 @@ export default function ExamCreate() {
                                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                                                         정답 *
                                                     </label>
-                                                    <input
-                                                        type="text"
-                                                        value={question.answerKey}
-                                                        onChange={(e) => handleQuestionChange(index, 'answerKey', e.target.value)}
-                                                        placeholder="정답을 입력하세요"
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '8px',
-                                                            border: '1px solid var(--border)',
-                                                            borderRadius: '4px'
-                                                        }}
-                                                    />
+                                                    {question.qtype === 'MCQ' ? (
+                                                        <select
+                                                            value={question.answerKey}
+                                                            onChange={(e) => handleQuestionChange(index, 'answerKey', e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                        >
+                                                            <option value="">정답을 선택하세요</option>
+                                                            <option value="1">1번</option>
+                                                            <option value="2">2번</option>
+                                                            <option value="3">3번</option>
+                                                            <option value="4">4번</option>
+                                                        </select>
+                                                    ) : (
+                                                        <input
+                                                            type="text"
+                                                            value={question.answerKey}
+                                                            onChange={(e) => handleQuestionChange(index, 'answerKey', e.target.value)}
+                                                            placeholder="정답을 입력하세요"
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '8px',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '4px'
+                                                            }}
+                                                        />
+                                                    )}
                                                 </div>
 
                                                 {/* 배점 */}

@@ -2,6 +2,7 @@ import ClassDetail from "../common/ClassDetail";
 import { useUserStomp } from "../../hooks/useUserStomp";
 import { useParams } from "react-router-dom";
 import { findNearestFutureSession, fetchExamBySessionId } from "../../utils/api";
+import { useState, useEffect, useCallback } from "react";
 
 // 강사용 알림 데이터
 const notifications = [
@@ -21,10 +22,40 @@ const teacherNavigationLinks = [
 export default function ClassManagement() {
     const { classId } = useParams();
     // 실제 로그인 연동 시 교체
-    const teacherId = 4;
+    const teacherId = 5;
     
     // STOMP 연결 관리
     const { handleLogout } = useUserStomp(teacherId);
+    
+    // 세션별 시험 존재 여부 상태
+    const [sessionExams, setSessionExams] = useState({});
+    const [examLoading, setExamLoading] = useState(false); // 초기값을 false로 변경
+
+    // setSessionExams 함수를 메모이제이션
+    const handleSetSessionExams = useCallback((examStatus) => {
+        setSessionExams(prev => {
+            // 이전 상태와 동일한지 확인하여 불필요한 업데이트 방지
+            const prevKeys = Object.keys(prev);
+            const newKeys = Object.keys(examStatus);
+            
+            if (prevKeys.length !== newKeys.length) {
+                return examStatus;
+            }
+            
+            for (const key of prevKeys) {
+                if (prev[key] !== examStatus[key]) {
+                    return examStatus;
+                }
+            }
+            
+            return prev; // 변경사항이 없으면 이전 상태 반환
+        });
+    }, []);
+
+    // setExamLoading 함수를 메모이제이션
+    const handleSetExamLoading = useCallback((loading) => {
+        setExamLoading(prev => prev !== loading ? loading : prev);
+    }, []);
 
     // 시험 작성 핸들러
     const handleExamCreate = async (session) => {
@@ -89,6 +120,10 @@ export default function ClassManagement() {
         const isCurrent = now >= sessionStart && now <= sessionEnd;
         const isFuture = now < sessionStart;
         const isPast = now > sessionEnd;
+        
+        // 해당 세션의 시험 존재 여부 확인
+        const hasExam = sessionExams[session.sessionId];
+        const isExamLoading = examLoading && sessionExams[session.sessionId] === undefined;
 
         return (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -110,13 +145,26 @@ export default function ClassManagement() {
                         시험 입장
                     </button>
                 )}
-                <button 
-                    className="btn btn-outline" 
-                    style={{ fontSize: '12px' }}
-                    onClick={() => window.location.href = `/teacher/class/${classId}/session/${session.sessionId}/statistics`}
-                >
-                    통계 보기
-                </button>
+                {/* 시험이 있는 경우에만 통계 보기 버튼 표시 */}
+                {hasExam && (
+                    <button 
+                        className="btn btn-outline" 
+                        style={{ fontSize: '12px' }}
+                        onClick={() => window.location.href = `/teacher/class/${classId}/session/${session.sessionId}/statistics`}
+                    >
+                        통계 보기
+                    </button>
+                )}
+                {/* 로딩 중일 때는 비활성화된 버튼 표시 */}
+                {isExamLoading && (
+                    <button 
+                        className="btn btn-outline" 
+                        style={{ fontSize: '12px', opacity: 0.5, cursor: 'not-allowed' }}
+                        disabled
+                    >
+                        로딩 중...
+                    </button>
+                )}
             </div>
         );
     };
@@ -129,6 +177,9 @@ export default function ClassManagement() {
             renderSessionActions={renderTeacherActions}
             onLogout={handleLogout}
             showStompStatus={false}
+            sessionExams={sessionExams}
+            setSessionExams={handleSetSessionExams}
+            setExamLoading={handleSetExamLoading}
         />
     );
 }

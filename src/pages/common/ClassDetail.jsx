@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header, StompStatusIndicator } from "../../components/common";
-import { fetchAllClasses, fetchClassSessions, formatTimeToMinutes } from "../../utils/api";
+import { fetchAllClasses, fetchClassSessions, formatTimeToMinutes, fetchExamBySessionId } from "../../utils/api";
 
 // 공통 강의 상세 페이지 컴포넌트
 export default function ClassDetail({ 
@@ -10,7 +10,10 @@ export default function ClassDetail({
     notifications,
     renderSessionActions,
     onLogout,
-    showStompStatus = false
+    showStompStatus = false,
+    sessionExams = {},
+    setSessionExams = () => {},
+    setExamLoading = () => {}
 }) {
     const { classId } = useParams();
     const navigate = useNavigate();
@@ -24,6 +27,19 @@ export default function ClassDetail({
     const [sessions, setSessions] = useState([]);
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [sessionsError, setSessionsError] = useState(null);
+    
+    // 시험 존재 여부 확인 완료 여부 추적
+    const examCheckCompleted = useRef(false);
+    const isCheckingExams = useRef(false);
+    
+    // 안전한 상태 업데이트를 위한 메모이제이션된 함수들
+    const safeSetSessionExams = useCallback((examStatus) => {
+        setSessionExams(examStatus);
+    }, [setSessionExams]);
+    
+    const safeSetExamLoading = useCallback((loading) => {
+        setExamLoading(loading);
+    }, [setExamLoading]);
 
     // 강의 정보 조회
     useEffect(() => {
@@ -70,6 +86,7 @@ export default function ClassDetail({
                     : [];
                 
                 setSessions(sortedSessions);
+                
             } catch (e) {
                 console.error("세션 목록 조회 실패:", e);
                 setSessionsError("세션 목록을 불러오지 못했습니다.");
@@ -82,6 +99,56 @@ export default function ClassDetail({
             loadSessions();
         }
     }, [classId]);
+
+    // 시험 존재 여부 확인 (선생님인 경우에만, 세션 목록 로드 후 실행)
+    useEffect(() => {
+        // 선생님이 아니거나 세션이 없으면 스킵
+        if (userType !== 'teacher' || sessions.length === 0) {
+            return;
+        }
+        
+        // 이미 확인 완료되었거나 확인 중이면 스킵
+        if (examCheckCompleted.current || isCheckingExams.current) {
+            return;
+        }
+        
+        const checkExamStatus = async () => {
+            try {
+                isCheckingExams.current = true; // 확인 시작 표시
+                safeSetExamLoading(true); // 시험 존재 여부 확인 시작
+                examCheckCompleted.current = true; // 확인 완료 표시
+                
+                // 약간의 지연을 두어 UI가 먼저 렌더링되도록 함
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // 병렬로 시험 존재 여부 확인
+                const examPromises = sessions.map(async (session) => {
+                    try {
+                        const exam = await fetchExamBySessionId(session.sessionId);
+                        return { sessionId: session.sessionId, hasExam: !!exam };
+                    } catch (error) {
+                        console.log(`세션 ${session.sessionId} 시험 조회 실패:`, error);
+                        return { sessionId: session.sessionId, hasExam: false };
+                    }
+                });
+                
+                const examResults = await Promise.all(examPromises);
+                const examStatus = {};
+                examResults.forEach(result => {
+                    examStatus[result.sessionId] = result.hasExam;
+                });
+                
+                safeSetSessionExams(examStatus);
+            } catch (error) {
+                console.error("시험 상태 확인 실패:", error);
+            } finally {
+                safeSetExamLoading(false); // 시험 존재 여부 확인 완료
+                isCheckingExams.current = false; // 확인 완료 표시
+            }
+        };
+        
+        checkExamStatus();
+    }, [sessions.length, userType]); // 의존성을 최소화
 
     // 날짜 포맷팅
     const formatDate = (dateString) => {
@@ -156,7 +223,7 @@ export default function ClassDetail({
                                 {classInfo.className}
                             </h1>
                             <div style={{ color: 'var(--muted)', fontSize: '14px' }}>
-                                {classInfo.teacherName} · {classInfo.semester}
+                                {classInfo.teacherName}{userType !== 'teacher' && ` · ${classInfo.semester}`}
                             </div>
                         </div>
                         
