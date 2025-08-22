@@ -239,11 +239,6 @@ export default function DashboardStudent() {
                                         <div key={c.classId} className="course-card">
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                                 <div className="course-title">{c.className}</div>
-                                                {c.isCurrent && (
-                                                    <span className="badge" style={{ backgroundColor: 'var(--success)', color: 'white' }}>
-                                                        진행중
-                                                    </span>
-                                                )}
                                             </div>
                                             <div className="course-info">
                                                 {c.teacherName} · {c.heldDaysString} · {formatTimeToMinutes(c.startsAt)}~{formatTimeToMinutes(c.endsAt)}

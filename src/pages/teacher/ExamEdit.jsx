@@ -8,6 +8,7 @@ import { useStomp } from '../../contexts/StompContext';
 const fetchQuestionsByExamId = async (examId) => {
     try {
         const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`);
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -16,6 +17,96 @@ const fetchQuestionsByExamId = async (examId) => {
     } catch (error) {
         console.error('시험 문제 조회 실패:', error);
         return [];
+    }
+};
+
+// 시험 수정 API
+const updateExam = async (examId, examData) => {
+    try {
+        console.log('시험 수정 요청 데이터:', { examId, examData });
+        
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(examData)
+        });
+        
+        console.log('시험 수정 응답 상태:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('시험 수정 응답 오류:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('시험 수정 성공:', result);
+        return result;
+    } catch (error) {
+        console.error('시험 수정 실패:', error);
+        throw error;
+    }
+};
+
+// 문제 수정 API
+const updateQuestion = async (examId, questionId, questionData) => {
+    try {
+        console.log('문제 수정 요청 데이터:', { examId, questionId, questionData });
+        
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/questions/${questionId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(questionData)
+        });
+        
+        console.log('문제 수정 응답 상태:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('문제 수정 응답 오류:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('문제 수정 성공:', result);
+        return result;
+    } catch (error) {
+        console.error('문제 수정 실패:', error);
+        throw error;
+    }
+};
+
+// 문제 생성 API
+const createQuestion = async (examId, questionData) => {
+    try {
+        console.log('문제 생성 요청 데이터:', { examId, questionData });
+        
+        const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(questionData)
+        });
+        
+        console.log('문제 생성 응답 상태:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('문제 생성 응답 오류:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('문제 생성 성공:', result);
+        return result;
+    } catch (error) {
+        console.error('문제 생성 실패:', error);
+        throw error;
     }
 };
 
@@ -220,9 +311,37 @@ export default function ExamEdit() {
             console.log('시험 임시 저장:', {
                 examId: exam.id,
                 sessionId: sessionId,
-                examData,
-                questions
-            });
+                name: examData.name,
+                difficulty: examData.difficulty,
+                isReady: false, // 임시 저장이므로 false
+                createdBy: teacherId
+            };
+            
+            await updateExam(exam.id, examUpdateData);
+            console.log('시험 임시 저장 완료');
+
+            // 2. 기존 문제들 수정 및 새 문제들 생성
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                const questionData = {
+                    qtype: q.qtype,
+                    body: q.body,
+                    choices: q.qtype === 'MCQ' ? q.choices : null, // MCQ일 때만 choices 전송, SHORT일 때는 null
+                    answerKey: q.answerKey,
+                    points: q.points,
+                    position: i + 1
+                };
+                
+                if (q.id && q.id.toString().startsWith('temp_')) {
+                    // 새로 추가된 문제 (임시 ID)
+                    await createQuestion(exam.id, questionData);
+                    console.log(`${i + 1}번 새 문제 생성 완료`);
+                } else {
+                    // 기존 문제 수정
+                    await updateQuestion(exam.id, q.id, questionData);
+                    console.log(`${i + 1}번 기존 문제 수정 완료`);
+                }
+            }
 
             // 임시 저장 성공 메시지
             alert('시험이 임시 저장되었습니다.');
@@ -268,16 +387,49 @@ export default function ExamEdit() {
 
         setSaving(true);
         try {
-            // TODO: 시험 수정 API 호출 (최종 제출)
-            console.log('시험 최종 제출:', {
-                examId: exam.id,
+            // 1. 시험 정보 수정 (최종 제출)
+            const examUpdateData = {
                 sessionId: sessionId,
-                examData: { ...examData, isReady: true },
-                questions
-            });
+                name: examData.name,
+                difficulty: examData.difficulty,
+                isReady: true, // 최종 제출이므로 true
+                createdBy: teacherId
+            };
+            
+            await updateExam(exam.id, examUpdateData);
+            console.log('시험 최종 제출 완료');
+
+            // 2. 기존 문제들 수정 및 새 문제들 생성
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                const questionData = {
+                    qtype: q.qtype,
+                    body: q.body,
+                    choices: q.qtype === 'MCQ' ? q.choices : null, // MCQ일 때만 choices 전송, SHORT일 때는 null
+                    answerKey: q.answerKey,
+                    points: q.points,
+                    position: i + 1
+                };
+                
+                if (q.id && !q.id.startsWith('temp_')) {
+                    // 기존 문제 수정
+                    await updateQuestion(q.id, questionData);
+                    console.log(`문제 ${i + 1} 수정 완료:`, q.id);
+                } else {
+                    // 새 문제 생성
+                    const createdQuestion = await createQuestion(exam.id, questionData);
+                    console.log(`문제 ${i + 1} 생성 완료:`, createdQuestion);
+                }
+            }
 
             // 3. 세션에 시험 준비 완료 알림 전송
-            await handleExamReadyNotification();
+            console.log('시험 준비 완료 알림 전송 시도...');
+            try {
+                await handleExamReadyNotification();
+                console.log('✅ 알림 전송 성공');
+            } catch (notificationError) {
+                console.log('⚠️ 알림 전송 실패, 하지만 시험은 수정됨:', notificationError);
+            }
 
             // 4. 최종 제출 성공 후 목록으로 이동
             alert('시험이 최종 제출되었습니다. 학생들에게 알림이 전송되었습니다.');

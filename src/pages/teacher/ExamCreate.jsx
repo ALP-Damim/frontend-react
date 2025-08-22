@@ -22,6 +22,8 @@ const fetchQuestionsByExamId = async (examId) => {
 // 시험 생성 API
 const createExam = async (examData) => {
     try {
+        console.log('시험 생성 요청 데이터:', examData);
+        
         const response = await fetch('https://team02-apim.azure-api.net/test-crud/api/exams', {
             method: 'POST',
             headers: {
@@ -44,6 +46,8 @@ const createExam = async (examData) => {
 // 문제 생성 API
 const createQuestion = async (examId, questionData) => {
     try {
+        console.log('문제 생성 요청 데이터:', { examId, questionData });
+        
         const response = await fetch(`https://team02-apim.azure-api.net/test-crud/api/exams/${examId}/questions`, {
             method: 'POST',
             headers: {
@@ -289,7 +293,7 @@ export default function ExamCreate() {
                 const questionData = {
                     qtype: q.qtype,
                     body: q.body,
-                    choices: q.qtype === 'MCQ' ? q.choices : null,
+                    choices: q.qtype === 'MCQ' ? q.choices : null, // MCQ일 때만 choices 전송, SHORT일 때는 null
                     answerKey: q.answerKey,
                     points: q.points,
                     position: i + 1
@@ -361,18 +365,24 @@ export default function ExamCreate() {
                 const questionData = {
                     qtype: q.qtype,
                     body: q.body,
-                    choices: q.qtype === 'MCQ' ? q.choices : null,
+                    choices: q.qtype === 'MCQ' ? q.choices : null, // MCQ일 때만 choices 전송, SHORT일 때는 null
                     answerKey: q.answerKey,
                     points: q.points,
                     position: i + 1
                 };
                 
-                await createQuestion(createdExam.id, questionData);
-                console.log(`${i + 1}번 문제 생성 완료`);
+                const createdQuestion = await createQuestion(createdExam.id, questionData);
+                console.log(`문제 ${i + 1} 생성 완료:`, createdQuestion);
             }
 
             // 3. 세션에 시험 준비 완료 알림 전송
-            await handleExamReadyNotification();
+            console.log('시험 준비 완료 알림 전송 시도...');
+            try {
+                await handleExamReadyNotification();
+                console.log('✅ 알림 전송 성공');
+            } catch (notificationError) {
+                console.log('⚠️ 알림 전송 실패, 하지만 시험은 생성됨:', notificationError);
+            }
 
             // 4. 최종 제출 성공 후 목록으로 이동
             alert('시험이 최종 제출되었습니다. 학생들에게 알림이 전송되었습니다.');
