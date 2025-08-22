@@ -628,11 +628,11 @@ export const submitAnswer = async (examId, userId, questionId, answerData) => {
 export const fetchExamResult = async (examId, userId) => {
     try {
         console.log('시험 결과 조회 요청:', {
-            url: `https://team02-apim.azure-api.net/result-service/submissions?examId=${examId}&userId=${userId}`,
+            url: `https://team02-apim.azure-api.net/result-service/submissions/${examId}/${userId}`,
             method: 'GET'
         });
         
-        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submissions?examId=${examId}&userId=${userId}`, {
+        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submissions/${examId}/${userId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -653,7 +653,7 @@ export const fetchExamResult = async (examId, userId) => {
         
         const result = await response.json();
         console.log('시험 결과 조회 성공:', result);
-        return Array.isArray(result) ? result[0] : result; // 첫 번째 결과 반환
+        return result; // 단일 결과 반환
     } catch (error) {
         console.error('시험 결과 조회 실패:', error);
         throw error;
@@ -664,11 +664,11 @@ export const fetchExamResult = async (examId, userId) => {
 export const fetchSubmissionAnswers = async (examId, userId) => {
     try {
         console.log('답안 상세 조회 요청:', {
-            url: `https://team02-apim.azure-api.net/result-service/submission-answers?examId=${examId}&userId=${userId}`,
+            url: `https://team02-apim.azure-api.net/result-service/submission-answers/${examId}/${userId}`,
             method: 'GET'
         });
         
-        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submission-answers?examId=${examId}&userId=${userId}`, {
+        const response = await fetch(`https://team02-apim.azure-api.net/result-service/submission-answers/${examId}/${userId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

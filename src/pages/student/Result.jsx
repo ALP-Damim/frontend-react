@@ -38,7 +38,14 @@ export default function Result() {
                 // 2. 답안 상세 조회
                 const answers = await fetchSubmissionAnswers(examId, studentId);
                 setSubmissionAnswers(answers);
-                console.log('답안 상세:', answers);
+                console.log('답안 상세 원본 데이터:', answers);
+                console.log('답안 상세 데이터 타입 확인:', answers.map(a => ({
+                    questionId: a.questionId,
+                    isCorrect: a.isCorrect,
+                    isCorrectType: typeof a.isCorrect,
+                    score: a.score,
+                    scoreType: typeof a.score
+                })));
 
                 // 3. 시험 문제 조회
                 const examQuestions = await fetchQuestionsByExamId(examId);
@@ -67,24 +74,87 @@ export default function Result() {
         loadExamResult();
     }, [examId, studentId, location.state]);
 
-    // 정답률 계산
+    // 정답률 계산 (더 안전한 방식)
     const calculateAccuracy = () => {
         if (!submissionAnswers.length || !questions.length) return 0;
         
-        const correctAnswers = submissionAnswers.filter(answer => answer.isCorrect).length;
-        return Math.round((correctAnswers / questions.length) * 100);
+        // 다양한 형태의 isCorrect 값을 처리
+        const correctAnswers = submissionAnswers.filter(answer => {
+            const isCorrect = answer.isCorrect;
+            // boolean true, 문자열 "true", 숫자 1 등을 정답으로 처리
+            return isCorrect === true || isCorrect === "true" || isCorrect === 1 || isCorrect === "1";
+        }).length;
+        
+        // 디버깅을 위한 상세 로그
+        console.log('정답률 계산 상세:', {
+            totalQuestions: questions.length,
+            correctAnswers: correctAnswers,
+            submissionAnswersCount: submissionAnswers.length,
+            submissionAnswersDetail: submissionAnswers.map(a => ({
+                questionId: a.questionId,
+                isCorrect: a.isCorrect,
+                isCorrectType: typeof a.isCorrect,
+                isCorrectValue: a.isCorrect
+            }))
+        });
+        
+        // 안전한 계산 (100%를 넘지 않도록)
+        const accuracy = Math.min(100, Math.round((correctAnswers / questions.length) * 100));
+        console.log('정답률 계산 결과:', {
+            correctAnswers,
+            totalQuestions: questions.length,
+            accuracy: accuracy
+        });
+        
+        return accuracy;
     };
 
-    // 총점 계산
+    // 총점 계산 (API에서 받은 score 필드 사용)
     const calculateTotalScore = () => {
         if (!submissionAnswers.length) return 0;
-        return submissionAnswers.reduce((sum, answer) => sum + (answer.score || 0), 0);
+        
+        // 숫자가 아닌 값들을 안전하게 처리
+        const totalScore = submissionAnswers.reduce((sum, answer) => {
+            const score = answer.score;
+            // 숫자로 변환 가능한 값만 처리
+            const numericScore = typeof score === 'number' ? score : 
+                               typeof score === 'string' ? parseFloat(score) || 0 : 0;
+            return sum + numericScore;
+        }, 0);
+        
+        console.log('총점 계산:', {
+            submissionAnswers: submissionAnswers.map(a => ({ 
+                questionId: a.questionId, 
+                score: a.score,
+                scoreType: typeof a.score
+            })),
+            totalScore: totalScore
+        });
+        return totalScore;
     };
 
-    // 만점 계산
+    // 만점 계산 (문제의 points 필드 사용)
     const calculateMaxScore = () => {
         if (!questions.length) return 0;
-        return questions.reduce((sum, question) => sum + question.points, 0);
+        
+        // 숫자가 아닌 값들을 안전하게 처리
+        const maxScore = questions.reduce((sum, question) => {
+            const points = question.points;
+            // 숫자로 변환 가능한 값만 처리
+            const numericPoints = typeof points === 'number' ? points : 
+                                typeof points === 'string' ? parseFloat(points) || 0 : 0;
+            return sum + numericPoints;
+        }, 0);
+        
+        console.log('만점 계산:', {
+            questions: questions.map(q => ({ 
+                id: q.id, 
+                points: q.points,
+                pointsType: typeof q.points
+            })),
+            maxScore: maxScore
+        });
+        return maxScore;
     };
 
     if (loading) {
@@ -128,6 +198,14 @@ export default function Result() {
     const totalScore = calculateTotalScore();
     const maxScore = calculateMaxScore();
     const accuracy = calculateAccuracy();
+    
+    console.log('최종 계산 결과:', {
+        totalScore,
+        maxScore,
+        accuracy,
+        submissionAnswersCount: submissionAnswers.length,
+        questionsCount: questions.length
+    });
 
     return (
         <>

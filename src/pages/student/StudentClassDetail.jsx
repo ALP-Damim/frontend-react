@@ -187,15 +187,15 @@ export default function StudentClassDetail() {
         
         // 시험 결과 확인 핸들러
         const handleExamResult = () => {
-            console.log('시험결과 확인 버튼 클릭됨');
+            console.log('시험결과 확인 버튼 클릭됨', exam);
             
-            // 목업 시험 결과 데이터
-            const mockExam = {
-                id: "exam-001",
-                name: "React 기초 시험",
-                description: "React의 기본 개념과 사용법에 대한 시험입니다.",
-                duration: 60,
-                totalPoints: 100
+            // 실제 시험 데이터 사용
+            const examData = {
+                id: exam.id || `exam-${session.sessionId}`,
+                name: exam.name || `세션 ${session.sessionId} 시험`,
+                description: exam.description || "시험 결과입니다.",
+                duration: exam.duration || 60,
+                totalPoints: exam.totalPoints || 100
             };
 
             const mockQuestions = [
@@ -249,8 +249,8 @@ export default function StudentClassDetail() {
             ];
 
             const mockSubmission = {
-                id: "submission-001",
-                examId: "exam-001",
+                id: `submission-${session.sessionId}`,
+                examId: examData.id,
                 studentId: studentId,
                 startTime: new Date().toISOString(),
                 status: "completed"
@@ -294,9 +294,9 @@ export default function StudentClassDetail() {
             const maxScore = mockQuestions.reduce((sum, question) => sum + question.points, 0);
 
             // 결과 페이지로 이동
-            navigate(`/student/exam/${mockExam.id}/result`, {
+            navigate(`/student/exam/${examData.id}/result`, {
                 state: {
-                    exam: mockExam,
+                    exam: examData,
                     submission: mockSubmission,
                     answers: mockAnswers,
                     questions: mockQuestions,
