@@ -129,37 +129,16 @@ export default function ExamQuestion() {
         }));
     };
 
-    // 다음 문제로 이동 (현재 답안 저장 후)
+    // 다음 문제로 이동 (모의 시험)
     const handleNextQuestion = async () => {
         if (!isLastQuestion) {
             try {
-                // 현재 답안 저장 (API 호출)
+                // 현재 답안 저장 (모의)
                 const currentAnswer = answers[currentQuestionIndex];
                 const endTime = new Date();
                 const timeSpent = Math.floor((endTime - questionStartTimeRef.current) / 1000); // 초 단위
                 
-                console.log(`문제 ${currentQuestionIndex + 1} 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
-                
-                // 답안 API 저장
-                const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submission-answers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        examId: exam.id,
-                        userId: studentId,
-                        questionId: currentQuestion.id,
-                        answerText: currentAnswer,
-                        isCorrect: false, // 임시로 false, 나중에 채점 로직에서 수정
-                        score: 0, // 임시로 0, 나중에 채점 로직에서 수정
-                        solvingTime: timeSpent
-                    })
-                });
-                
-                if (!answerResponse.ok) {
-                    throw new Error(`답안 저장 실패: ${answerResponse.status}`);
-                }
+                console.log(`문제 ${currentQuestionIndex + 1} 답안 저장 (모의):`, currentAnswer, `소요시간: ${timeSpent}초`);
                 
                 // 다음 문제로 이동 (되돌리기 불가)
                 const nextIndex = currentQuestionIndex + 1;
@@ -173,13 +152,13 @@ export default function ExamQuestion() {
                     }
                 });
             } catch (error) {
-                console.error('답안 저장 실패:', error);
-                setError('답안 저장에 실패했습니다. 다시 시도해주세요.');
+                console.error('모의 답안 저장 실패:', error);
+                setError('모의 답안 저장에 실패했습니다. 다시 시도해주세요.');
             }
         }
     };
 
-    // 시험 제출
+    // 시험 제출 (모의 시험)
     const handleSubmitExam = async () => {
         if (!window.confirm('정말로 시험을 제출하시겠습니까? 제출 후에는 수정할 수 없습니다.')) {
             return;
@@ -187,55 +166,18 @@ export default function ExamQuestion() {
 
         setLoading(true);
         try {
-            // 마지막 문제 답안 저장
+            console.log('모의 시험 제출 - API 호출 없음');
+            
+            // 마지막 문제 답안 저장 (모의)
             const currentAnswer = answers[currentQuestionIndex];
             const endTime = new Date();
             const timeSpent = Math.floor((endTime - questionStartTimeRef.current) / 1000); // 초 단위
             
-            console.log(`마지막 문제 답안 저장:`, currentAnswer, `소요시간: ${timeSpent}초`);
-            
-            // 마지막 답안 API 저장
-            const answerResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submission-answers', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    examId: exam.id,
-                    userId: studentId,
-                    questionId: currentQuestion.id,
-                    answerText: currentAnswer,
-                    isCorrect: false, // 임시로 false, 나중에 채점 로직에서 수정
-                    score: 0, // 임시로 0, 나중에 채점 로직에서 수정
-                    solvingTime: timeSpent
-                })
-            });
-            
-            if (!answerResponse.ok) {
-                throw new Error(`답안 저장 실패: ${answerResponse.status}`);
-            }
+            console.log(`마지막 문제 답안 저장 :`, currentAnswer, `소요시간: ${timeSpent}초`);
 
-            // submission 완료 처리
-            const submissionResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/api/submissions/${submission.examId}/${submission.userId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    examId: exam.id,
-                    userId: studentId,
-                    totalScore: totalScore,
-                    feedback: "시험 완료"
-                })
-            });
-            
-            if (!submissionResponse.ok) {
-                throw new Error(`Submission 완료 처리 실패: ${submissionResponse.status}`);
-            }
+            console.log('시험 제출 완료');
 
-            console.log('모든 답안 제출 완료');
-
-            // 결과 계산
+            // 결과 계산 (모의)
             const results = questions.map((question, index) => {
                 const userAnswer = answers[index] || '';
                 let isCorrect = false;
@@ -263,7 +205,9 @@ export default function ExamQuestion() {
             const totalScore = results.reduce((sum, result) => sum + result.score, 0);
             const maxScore = questions.reduce((sum, question) => sum + question.points, 0);
 
-            // 결과 페이지로 이동
+            console.log('모의 시험 결과 계산 완료:', { totalScore, maxScore, results });
+
+            // 모의 결과 페이지로 이동
             navigate(`/student/exam/${examId}/result`, {
                 state: {
                     exam,
@@ -276,8 +220,8 @@ export default function ExamQuestion() {
                 }
             });
         } catch (error) {
-            console.error('시험 제출 실패:', error);
-            setError('시험 제출에 실패했습니다. 다시 시도해주세요.');
+            console.error('모의 시험 제출 실패:', error);
+            setError('모의 시험 제출에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setLoading(false);
         }

@@ -361,44 +361,27 @@ export default function ExamCreate() {
 
         setSaving(true);
         try {
-            // 1. 시험 생성 (최종 제출)
-            const examRequestData = {
+            // 1. 시험 생성 API 호출 없이 바로 넘어감
+            console.log('시험 최종 제출 - API 호출 없음');
+            console.log('시험 데이터:', {
                 sessionId: session.sessionId,
                 name: examData.name,
                 difficulty: examData.difficulty,
-                isReady: true, // 최종 제출이므로 true
+                isReady: true,
                 createdBy: teacherId
-            };
-            
-            const createdExam = await createExam(examRequestData);
-            console.log('시험 최종 제출 완료:', createdExam);
+            });
+            console.log('문제 데이터:', questions);
 
-            // 2. 문제들 생성
-            for (let i = 0; i < questions.length; i++) {
-                const q = questions[i];
-                const questionData = {
-                    qtype: q.qtype,
-                    body: q.body,
-                    choices: q.qtype === 'MCQ' ? q.choices : null,
-                    answerKey: q.answerKey,
-                    points: q.points,
-                    position: i + 1
-                };
-                
-                await createQuestion(createdExam.id, questionData);
-                console.log(`${i + 1}번 문제 생성 완료`);
-            }
-
-            // 3. 세션에 시험 준비 완료 알림 전송 (API 호출 없이 바로 넘어감)
+            // 2. 세션에 시험 준비 완료 알림 전송
             console.log('시험 준비 완료 알림 전송 시도...');
             try {
                 await handleExamReadyNotification();
                 console.log('✅ 알림 전송 성공');
             } catch (notificationError) {
-                console.log('⚠️ 알림 전송 실패, 하지만 시험은 생성됨:', notificationError);
+                console.log('⚠️ 알림 전송 실패:', notificationError);
             }
 
-            // 4. 최종 제출 성공 후 목록으로 이동
+            // 3. 최종 제출 성공 후 목록으로 이동
             alert('시험이 최종 제출되었습니다. 학생들에게 알림이 전송되었습니다.');
             navigate(`/teacher/class/${classId}`);
         } catch (error) {

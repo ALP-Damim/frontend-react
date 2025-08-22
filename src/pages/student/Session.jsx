@@ -219,57 +219,40 @@ export default function Session() {
 
 
 
-    // 시험 시작 핸들러
+    // 시험 시작 핸들러 (모의 시험으로 이동)
     const handleExamStart = async () => {
         if (!exam || !examReady) {
             return;
         }
         
         try {
-            // 1. 빈 submission 생성
-            const submissionResponse = await fetch('https://team02-apim.azure-api.net/test-crud/api/submissions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    examId: exam.id,
-                    userId: studentId,
-                    totalScore: 0,
-                    feedback: ""
-                })
-            });
+            console.log('모의 시험 시작 - API 호출 없음');
             
-            if (!submissionResponse.ok) {
-                throw new Error(`Submission 생성 실패: ${submissionResponse.status}`);
-            }
+            // 모의 submission 데이터
+            const mockSubmission = {
+                id: "submission-001",
+                examId: exam.id,
+                userId: studentId,
+                totalScore: 0,
+                feedback: ""
+            };
             
-            const submission = await submissionResponse.json();
-            console.log('시험 제출 데이터가 생성되었습니다:', submission);
+            console.log('모의 시험 제출 데이터:', mockSubmission);
+            console.log('모의 시험 문제:', mockQuestions);
             
-            // 2. examId로 questions 조회
-            const questionsResponse = await fetch(`https://team02-apim.azure-api.net/test-crud/exams/${exam.id}/questions`);
-            
-            if (!questionsResponse.ok) {
-                throw new Error(`Questions 조회 실패: ${questionsResponse.status}`);
-            }
-            
-            const questions = await questionsResponse.json();
-            console.log('시험 문제를 조회했습니다:', questions);
-            
-            // 3. 첫 번째 문제 페이지로 이동
+            // 모의 시험 첫 번째 문제 페이지로 이동
             navigate(`/student/exam/${exam.id}/question/1`, {
                 state: {
                     exam: exam,
-                    questions: questions,
-                    submission: submission,
+                    questions: mockQuestions,
+                    submission: mockSubmission,
                     currentQuestionIndex: 0
                 }
             });
             
         } catch (error) {
-            console.error('시험 시작 실패:', error);
-            setError("시험을 시작할 수 없습니다. 다시 시도해주세요.");
+            console.error('모의 시험 시작 실패:', error);
+            setError("모의 시험을 시작할 수 없습니다. 다시 시도해주세요.");
         }
     };
 
